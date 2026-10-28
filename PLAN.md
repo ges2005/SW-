@@ -69,6 +69,22 @@ Mantık ayrı olduğu için çizim/girdi değişse (başka kamera, yeni ekran) m
   - **Denenen 2:** güçlü lastik bant (%70 / x0.4): lider-kalma %55'e düştü ama zorluk sıralaması bozuldu (kolay, normali geçti) → **kaldırıldı**. Beceri farkı ile kartopu aynı şey; ikisini birden korumak için zayıf mekanik gerekir.
   - **Seçilen:** ana noktalar kule gibi ateş eder (`CFG.baseTower`). Erken elenmeyi zorlaştırıyor: 120 sn'ye ulaşan oyun 53'ten 72'ye, ortalama süre 139'dan 161 sn'ye çıktı. Lider-kalma oranı (%92) pek değişmedi; yani kartopu tamamen çözülmedi, yalnızca geri dönüş penceresi uzadı. Kalan iş: daha ince bir mekanik (örn. kuşatma bonusu, nokta kaybında kademeli kayıp).
 
-## Sıradaki aşamalar
+- **Aşama 6 — Paketleme (goal 3-6. maddeler):**
+  - **PWA:** manifest, 192/512/maskable ikonlar, çevrimdışı hizmet çalışanı, dikey ve yatay düzen. `npm run pwa`: Chromium kurulabilirlik denetimi hatasız, çevrimdışı açılış çalışıyor, 4 ekran boyutunda (390x780, 780x390, 360x640, 844x390) kontroller çakışmıyor ve ekran dışına taşmıyor. `/SW-/` alt yolunda (GitHub Pages) çevrimdışı çalıştığı ayrıca doğrulandı.
+  - **Yayın:** `.github/workflows/pages.yml` (testler geçerse Pages'e yayın). Çalıştırılmadı; etkinleştirme adımları `docs/YAYIN-VE-MOBIL.md`.
+  - **Android:** Capacitor 8 projesi (`android/`), özel simge ve açılış ekranı, tam ekran tema, `.github/workflows/android.yml` (debug APK). **Derleme doğrulanamadı:** bu ortamda Google Maven/SDK erişimi yok (`./gradlew tasks` → 403). İlk gerçek doğrulama GitHub Actions çalıştırmasıdır.
+  - **iOS:** yapılmadı, gereksinimler `docs/YAYIN-VE-MOBIL.md` içinde.
+
+## Doğrulanmadı / açık işler
+- Gerçek telefonda dokunma hissi, performans (çok birimli savaşlar), ses.
+- Android APK derlemesi ve cihaza kurulumu; Pages yayını.
+- Kartopu etkisi tam çözülmedi (lider-kalma ~%92); daha ince bir geri dönüş mekaniği gerekebilir.
+- Rastgele haritalarda tür/nokta değerlerinin ayrıca dengelenmesi.
+
+## Öneriler (hedef dışı)
+- Yeni birim türleri, daha çok nokta türü, çok oyunculu mod, ses/müzik içeriği, kampanya hikayesi, başarımlar.
+
+## Sıradaki aşamalar (eski liste)
+
 6. **Paketleme:** PWA, sonra Capacitor ile mobil uygulama.
 7. **Dengeleme:** kartopu etkisini sınırlayan geri dönüş mekanikleri; tür ve nokta değerlerinin oyun testiyle ayarı.
