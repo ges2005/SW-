@@ -28,4 +28,7 @@ export const CFG = {
     capBase: 6, capPerPoint: 3,
     buffPerPoint: 0.05, // sahip olunan her ek nokta için hp/hasar çarpanı
   },
+  // Geri dönüş mekaniği: ana noktalar da kule gibi yakındaki düşmana ateş eder. Erken elenmeyi zorlaştırır, oyunu uzatır.
+  // (Üretim hızı lastik bandı denendi: kartopunu kırıyor ama zorluk sıralamasını bozuyor, bu yüzden kaldırıldı.)
+  baseTower: true,
 };

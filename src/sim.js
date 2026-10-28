@@ -116,7 +116,7 @@ export function step(g, dt) {
   }
   // kuleler: sahibi olan takımın birimi dışındaki en yakın düşmana ateş eder
   for (const p of g.points) {
-    if (p.kind !== 'kule' || p.owner < 0) continue;
+    if (!(p.kind === 'kule' || (p.kind === 'ana' && CFG.baseTower)) || p.owner < 0) continue;
     p.cd = Math.max(0, p.cd - dt);
     if (p.cd > 0) continue;
     let foe = null, fd = CFG.tower.range;

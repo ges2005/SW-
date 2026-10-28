@@ -62,6 +62,13 @@ Mantık ayrı olduğu için çizim/girdi değişse (başka kamera, yeni ekran) m
   - **Öğretici (`src/tutorial.js`):** 7 adımlık rehber; her adım yapılınca otomatik ilerler (seçme, gönderme, ele geçirme, üretim türü, kamera, grup, sis ve amaç). "Atla" düğmesi var; öğretici bölümünde rakip ilk 150 saniye hareketsiz.
   - Bilinmeyen: rastgele haritalarda yapay zekanın dengesi ayrıca ölçülmedi (yalnızca çalıştığı test edildi).
 
+- **Dengeleme ve geri dönüş (goal 2. madde):**
+  - Zorluk sıralaması rastgele haritalarda da korunuyor (`RAND=1 node test/ai-balance.js ...`). 96 oyunluk örnekte zor normale göre +%42 (klasik) / +%49 (rastgele) nokta; normal kolaya göre +%54 / +%300.
+  - Kartopu ölçümü (`node test/snowball.js 100`): taban çizgide 120. saniyedeki lider sonda %91 önde, ortalama oyun 139 sn, oyunların yarısı 120 sn'ye varmadan bitiyor.
+  - **Denenen 1:** üretim süresi lastik bandı (liderin %50 altındaki takım hızlanır): sonuç değişmedi (%94).
+  - **Denenen 2:** güçlü lastik bant (%70 / x0.4): lider-kalma %55'e düştü ama zorluk sıralaması bozuldu (kolay, normali geçti) → **kaldırıldı**. Beceri farkı ile kartopu aynı şey; ikisini birden korumak için zayıf mekanik gerekir.
+  - **Seçilen:** ana noktalar kule gibi ateş eder (`CFG.baseTower`). Erken elenmeyi zorlaştırıyor: 120 sn'ye ulaşan oyun 53'ten 72'ye, ortalama süre 139'dan 161 sn'ye çıktı. Lider-kalma oranı (%92) pek değişmedi; yani kartopu tamamen çözülmedi, yalnızca geri dönüş penceresi uzadı. Kalan iş: daha ince bir mekanik (örn. kuşatma bonusu, nokta kaybında kademeli kayıp).
+
 ## Sıradaki aşamalar
 6. **Paketleme:** PWA, sonra Capacitor ile mobil uygulama.
 7. **Dengeleme:** kartopu etkisini sınırlayan geri dönüş mekanikleri; tür ve nokta değerlerinin oyun testiyle ayarı.

@@ -129,3 +129,13 @@ for (const [seed, seats] of [[11, [0, 2]], [23, [0, 1, 3]], [42, [0, 1, 2, 3]]])
   assert.ok(g.points.some(p => p.owner >= 0 && !p.base) || g.winner !== -1, `seed ${seed}: yapay zeka hiç nokta almadı`);
 }
 console.log('rastgele harita yapay zeka testi tamam');
+
+// Ana nokta kule gibi ateş eder (geri dönüş mekaniği)
+{
+  const g = createGame(); g.units = []; g.teams.forEach(t => { t.spawnT = -1e9; });
+  const base = g.points.find(p => p.base && p.team === 1);
+  const v = spawnUnit(g, 0, 'zirh', base.x + 3, base.y);
+  for (let i = 0; i < 20 * 4; i++) { step(g, 0.05); v.x = base.x + 3; v.y = base.y; }
+  assert.ok(v.hp < v.maxHp, 'ana nokta yakındaki düşmana ateş etmeli');
+}
+console.log('ana nokta kulesi testi tamam');
