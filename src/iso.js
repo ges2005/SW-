@@ -24,7 +24,7 @@ export function clampCam(cam) {
 }
 
 export function minimapRect(cam) {
-  const w = Math.min(190, cam.w * 0.4), h = w / 2;
+  const w = Math.min(190, cam.w * 0.32), h = w / 2;
   return { x: cam.w - w - 10, y: cam.h - h - 10, w, h };
 }
 
@@ -34,7 +34,7 @@ const poly = (ctx, pts, fill, stroke) => {
   if (stroke) { ctx.strokeStyle = stroke; ctx.stroke(); }
 };
 const diamond = (cam, i, j, r) => [[i - r, j - r], [i + r, j - r], [i + r, j + r], [i - r, j + r]].map(([a, b]) => toScreen(cam, a, b));
-const teamColor = t => (t < 0 ? '#d9dcde' : CFG.teams[t].color);
+export const teamColor = t => (t < 0 ? '#d9dcde' : CFG.teams[t].color);
 
 export function render(ctx, cam, g, ui) {
   const z = cam.zoom;
@@ -75,10 +75,15 @@ export function render(ctx, cam, g, ui) {
   // birimler (arkadan öne sıralı)
   const us = [...g.units].sort((a, b) => a.x + a.y - (b.x + b.y));
   for (const u of us) {
-    const s = toScreen(cam, u.x, u.y), col = teamColor(u.team);
+    const s0 = toScreen(cam, u.x, u.y), col = teamColor(u.team);
+    // yürüme sekmesi ve vuruş atılması
+    const bob = u.moving ? Math.abs(Math.sin(ui.time * 12 + u.id)) * 3 * z : 0;
+    const lunge = u.atk > 0 ? Math.sin(u.atk / 0.25 * Math.PI) * 7 * z : 0;
+    const ldx = (u.fx - u.fy), ldy = (u.fx + u.fy) / 2, ll = Math.hypot(ldx, ldy) || 1;
+    const s = { x: s0.x + ldx / ll * lunge, y: s0.y + ldy / ll * lunge - bob };
     ctx.fillStyle = 'rgba(0,0,0,.25)';
-    ctx.beginPath(); ctx.ellipse(s.x, s.y, 13 * z, 6 * z, 0, 0, 7); ctx.fill();
-    if (ui.selected.has(u.id)) { ctx.lineWidth = 2; ctx.strokeStyle = '#fff'; ctx.beginPath(); ctx.ellipse(s.x, s.y, 17 * z, 8 * z, 0, 0, 7); ctx.stroke(); }
+    ctx.beginPath(); ctx.ellipse(s0.x, s0.y, 13 * z, 6 * z, 0, 0, 7); ctx.fill();
+    if (ui.selected.has(u.id)) { ctx.lineWidth = 2; ctx.strokeStyle = '#fff'; ctx.beginPath(); ctx.ellipse(s0.x, s0.y, 17 * z, 8 * z, 0, 0, 7); ctx.stroke(); }
     ctx.fillStyle = col; ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.roundRect(s.x - 7 * z, s.y - 32 * z, 14 * z, 30 * z, 5 * z); ctx.fill(); ctx.stroke();
     ctx.fillStyle = '#e8c4a0'; ctx.beginPath(); ctx.arc(s.x, s.y - 38 * z, 7 * z, 0, 7); ctx.fill(); ctx.stroke();
@@ -86,6 +91,8 @@ export function render(ctx, cam, g, ui) {
     ctx.fillStyle = '#0006'; ctx.fillRect(s.x - 12 * z, s.y - 54 * z, 24 * z, 4 * z);
     ctx.fillStyle = f > 0.4 ? '#5bd400' : '#e11'; ctx.fillRect(s.x - 12 * z, s.y - 54 * z, 24 * z * f, 4 * z);
   }
+
+  if (ui.fx) ui.fx.draw(ctx, cam);
 
   // kutu seçimi
   if (ui.box) {

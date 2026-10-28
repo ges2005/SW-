@@ -19,6 +19,7 @@ assert.ok(capacity(g, 0) > cap0, 'kapasite artmalı');
 // Yapay zeka ile uzun koşu: çökmemeli, kapasite aşılmamalı
 const g2 = createGame();
 const ais = [0, 1, 2, 3].map(createAI);
-for (let i = 0; i < 20 * 600; i++) { ais.forEach(a => stepAI(g2, a, 0.05)); step(g2, 0.05); }
+for (let i = 0; i < 20 * 600; i++) { ais.forEach(a => stepAI(g2, a, 0.05)); step(g2, 0.05); if (g2.events.length > 400) g2.events.splice(0, 200); }
 for (const t of g2.teams) assert.ok(g2.units.filter(u => u.team === t.id).length <= capacity(g2, t.id) + 3);
+assert.ok(g2.events.some(e => e.type === 'hit') && g2.events.some(e => e.type === 'death') && g2.events.some(e => e.type === 'capture'), 'olaylar üretilmeli');
 console.log('ok; kazanan:', g2.winner, 'sahip olunan:', [0, 1, 2, 3].map(t => ownedCount(g2, t)));

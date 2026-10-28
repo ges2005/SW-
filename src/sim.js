@@ -24,7 +24,7 @@ export function createGame() {
   const g = {
     t: 0, nextId: 1, units: [], points: layout(),
     teams: CFG.teams.map((_, i) => ({ id: i, alive: true, spawnT: 0 })),
-    winner: -1,
+    winner: -1, events: [], // çizim/ses katmanının tükettiği olaylar
   };
   for (let t = 0; t < 4; t++) for (let k = 0; k < 3; k++) spawn(g, t, k);
   return g;
@@ -47,8 +47,9 @@ function spawn(g, t, k = 0) {
   const hp = CFG.unit.hp * buff(g, t);
   g.units.push({
     id: g.nextId++, team: t, x: b.x + Math.cos(a) * 1.2, y: b.y + Math.sin(a) * 1.2,
-    hp, maxHp: hp, tx: null, ty: null, cd: 0,
+    hp, maxHp: hp, tx: null, ty: null, cd: 0, atk: 0, moving: false, fx: 0, fy: 0,
   });
+  g.events.push({ type: 'spawn', x: b.x, y: b.y, team: t });
 }
 
 export function commandMove(g, ids, x, y) {
@@ -79,6 +80,8 @@ export function step(g, dt) {
   // savaş ve hareket
   for (const u of g.units) {
     u.cd = Math.max(0, u.cd - dt);
+    u.atk = Math.max(0, u.atk - dt);
+    u.moving = false;
     let foe = null, fd = Infinity;
     for (const v of g.units) {
       if (v.team === u.team) continue;
@@ -86,7 +89,11 @@ export function step(g, dt) {
       if (d < fd) { fd = d; foe = v; }
     }
     if (foe && fd <= U.range) {
-      if (u.cd === 0) { foe.hp -= U.dmg * buff(g, u.team); u.cd = U.cooldown; }
+      u.fx = (foe.x - u.x) / (fd || 1); u.fy = (foe.y - u.y) / (fd || 1);
+      if (u.cd === 0) {
+        foe.hp -= U.dmg * buff(g, u.team); u.cd = U.cooldown; u.atk = 0.25;
+        g.events.push({ type: 'hit', x: foe.x, y: foe.y, team: u.team });
+      }
       continue; // dövüşürken yerinde durur
     }
     let gx = u.tx, gy = u.ty;
@@ -94,7 +101,7 @@ export function step(g, dt) {
     if (gx !== null) {
       const dx = gx - u.x, dy = gy - u.y, d = Math.hypot(dx, dy);
       if (d < 0.1) { if (u.tx !== null && gx === u.tx) { u.tx = u.ty = null; } }
-      else { const s = Math.min(d, U.speed * dt); u.x += dx / d * s; u.y += dy / d * s; }
+      else { const s = Math.min(d, U.speed * dt); u.x += dx / d * s; u.y += dy / d * s; u.moving = true; u.fx = dx / d; u.fy = dy / d; }
     }
   }
   // ayrışma (üst üste binmesinler)
@@ -103,6 +110,7 @@ export function step(g, dt) {
     const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy);
     if (d > 0 && d < 0.5) { const p = (0.5 - d) / 2 / d; a.x -= dx * p; a.y -= dy * p; b.x += dx * p; b.y += dy * p; }
   }
+  for (const u of g.units) if (u.hp <= 0) g.events.push({ type: 'death', x: u.x, y: u.y, team: u.team });
   g.units = g.units.filter(u => u.hp > 0);
 
   // nokta ele geçirme: tek takım bekliyorsa ilerler, çekişme varsa durur
@@ -117,6 +125,7 @@ export function step(g, dt) {
     if (p.prog >= 1) {
       const prev = p.owner;
       p.owner = t; p.prog = 0; p.capTeam = -1;
+      g.events.push({ type: 'capture', x: p.x, y: p.y, team: t });
       if (p.base && prev >= 0) eliminate(g, prev);
     }
   }

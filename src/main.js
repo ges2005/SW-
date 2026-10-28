@@ -3,6 +3,8 @@ import { createGame, step, ownedCount, unitCount, capacity, spawnInterval, buff 
 import { createAI, stepAI } from './ai.js';
 import { render, toScreen, toWorld, clampCam } from './iso.js';
 import { bindInput } from './input.js';
+import { createFx } from './fx.js';
+import { unlockAudio, playEvent, setMuted, isMuted, clickSound } from './audio.js';
 
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
@@ -11,7 +13,8 @@ const msg = document.getElementById('msg');
 let game = createGame();
 let ais = [1, 2, 3].map(createAI);
 const cam = { x: 0, y: 0, zoom: 1, w: 0, h: 0 };
-const ui = { selected: new Set(), box: null, project: (i, j) => toScreen(cam, i, j) };
+const fx = createFx();
+const ui = { selected: new Set(), box: null, time: 0, fx, project: (i, j) => toScreen(cam, i, j) };
 
 function fit() {
   const dpr = window.devicePixelRatio || 1;
@@ -28,17 +31,22 @@ function focusBase() {
 fit(); focusBase();
 window.addEventListener('resize', fit);
 bindInput(canvas, cam, () => game, ui);
+canvas.addEventListener('pointerdown', unlockAudio);
+document.getElementById('mute').onclick = e => { unlockAudio(); setMuted(!isMuted()); e.target.textContent = isMuted() ? '🔇' : '🔊'; };
 
 document.getElementById('all').onclick = () => { ui.selected.clear(); game.units.forEach(u => u.team === 0 && ui.selected.add(u.id)); };
 document.getElementById('none').onclick = () => ui.selected.clear();
 document.getElementById('base').onclick = focusBase;
+document.getElementById('all').addEventListener('click', clickSound);
 document.getElementById('restart').onclick = () => { game = createGame(); ais = [1, 2, 3].map(createAI); ui.selected.clear(); msg.hidden = true; focusBase(); };
 
 let last = performance.now(), acc = 0;
 const DT = 1 / 20;
 function frame(now) {
   acc += Math.min(0.25, (now - last) / 1000); last = now;
-  while (acc >= DT) { ais.forEach(a => stepAI(game, a, DT)); step(game, DT); acc -= DT; }
+  while (acc >= DT) { ais.forEach(a => stepAI(game, a, DT)); step(game, DT); fx.update(DT); ui.time += DT; acc -= DT; }
+  for (const e of game.events) { fx.add(e); playEvent(e, 0); }
+  game.events.length = 0;
   for (const id of [...ui.selected]) if (!game.units.some(u => u.id === id)) ui.selected.delete(id);
   render(ctx, cam, game, ui);
   const t = 0;
