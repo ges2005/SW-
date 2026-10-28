@@ -1,4 +1,5 @@
 import { CFG } from './config.js';
+import { isVisible, isSeen } from './vision.js';
 
 const N = CFG.mapSize;
 export const TW = 64, TH = 32;
@@ -37,7 +38,8 @@ const diamond = (cam, i, j, r) => [[i - r, j - r], [i + r, j - r], [i + r, j + r
 export const teamColor = t => (t < 0 ? '#d9dcde' : CFG.teams[t].color);
 
 export function render(ctx, cam, g, ui) {
-  const z = cam.zoom;
+  const z = cam.zoom, V = ui.vision;
+  const ownerOf = p => (isVisible(V, p.x, p.y) ? p.owner : (V.known[p.id] ?? -1));
   ctx.clearRect(0, 0, cam.w, cam.h);
   const bg = ctx.createLinearGradient(0, 0, 0, cam.h);
   bg.addColorStop(0, '#1f7ae0'); bg.addColorStop(1, '#06264d');
@@ -54,23 +56,38 @@ export function render(ctx, cam, g, ui) {
   // noktalar
   const GLYPH = { eko: null, demirci: '♦', kule: '♣', ana: null };
   for (const p of g.points) {
+    if (!isSeen(V, p.x, p.y)) continue;
+    const own = ownerOf(p), live = isVisible(V, p.x, p.y);
     const r = p.base ? 1.1 : 0.8;
-    poly(ctx, diamond(cam, p.x, p.y, r), p.base ? teamColor(p.owner) : '#fff', null);
+    poly(ctx, diamond(cam, p.x, p.y, r), p.base ? teamColor(own) : '#fff', null);
     const s = toScreen(cam, p.x, p.y);
     if (!p.base) {
-      ctx.fillStyle = teamColor(p.owner); ctx.font = `${30 * z}px sans-serif`;
+      ctx.fillStyle = teamColor(own); ctx.font = `${30 * z}px sans-serif`;
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText(GLYPH[p.kind] || (p.suit === 'S' ? '♠' : '♥'), s.x, s.y);
     }
     if (p.kind === 'kule') { // kule gövdesi
-      ctx.fillStyle = p.owner < 0 ? '#9aa2a8' : teamColor(p.owner); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5;
+      ctx.fillStyle = own < 0 ? '#9aa2a8' : teamColor(own); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.roundRect(s.x - 8 * z, s.y - 40 * z, 16 * z, 38 * z, 3 * z); ctx.fill(); ctx.stroke();
       ctx.fillRect(s.x - 11 * z, s.y - 46 * z, 22 * z, 7 * z);
     }
-    if (p.capTeam >= 0 && p.prog > 0) { // ele geçirme ilerlemesi
+    if (live && p.capTeam >= 0 && p.prog > 0) { // ele geçirme ilerlemesi
       ctx.fillStyle = '#0003'; ctx.fillRect(s.x - 20 * z, s.y + 14 * z, 40 * z, 5 * z);
       ctx.fillStyle = teamColor(p.capTeam); ctx.fillRect(s.x - 20 * z, s.y + 14 * z, 40 * z * p.prog, 5 * z);
     }
+  }
+
+  // sis: tek bir yol olarak doldurulur (kareler arası çizgi kalmaz)
+  if (CFG.fog.enabled) {
+    const dark = new Path2D(), dim = new Path2D();
+    for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) {
+      if (V.vis[i * N + j]) continue;
+      const a = toScreen(cam, i - 0.02, j - 0.02), b = toScreen(cam, i + 1.02, j - 0.02), c = toScreen(cam, i + 1.02, j + 1.02), d = toScreen(cam, i - 0.02, j + 1.02);
+      const path = V.seen[i * N + j] ? dim : dark;
+      path.moveTo(a.x, a.y); path.lineTo(b.x, b.y); path.lineTo(c.x, c.y); path.lineTo(d.x, d.y); path.closePath();
+    }
+    ctx.fillStyle = 'rgba(6,18,38,.97)'; ctx.fill(dark);
+    ctx.fillStyle = 'rgba(6,18,38,.5)'; ctx.fill(dim);
   }
 
   // hedef işaretleri
@@ -78,7 +95,7 @@ export function render(ctx, cam, g, ui) {
   for (const u of g.units) if (ui.selected.has(u.id) && u.tx !== null) poly(ctx, diamond(cam, u.tx, u.ty, 0.35), null, '#e11');
 
   // birimler (arkadan öne sıralı)
-  const us = [...g.units].sort((a, b) => a.x + a.y - (b.x + b.y));
+  const us = g.units.filter(u => u.team === 0 || isVisible(V, u.x, u.y)).sort((a, b) => a.x + a.y - (b.x + b.y));
   for (const u of us) {
     const s0 = toScreen(cam, u.x, u.y), col = teamColor(u.team);
     // yürüme sekmesi ve vuruş atılması
@@ -112,9 +129,13 @@ export function render(ctx, cam, g, ui) {
   const m = minimapRect(cam);
   ctx.fillStyle = 'rgba(0,0,0,.7)'; ctx.beginPath(); ctx.roundRect(m.x, m.y, m.w, m.h, 6); ctx.fill();
   const mp = (i, j) => ({ x: m.x + m.w / 2 + (i - j) / N * m.w / 2 * 0.92, y: m.y + m.h / 2 + (i + j - N) / N * m.h / 2 * 0.92 });
-  poly(ctx, [mp(0, 0), mp(N, 0), mp(N, N), mp(0, N)], '#444', null);
-  for (const p of g.points) { const q = mp(p.x, p.y); ctx.fillStyle = teamColor(p.owner); ctx.fillRect(q.x - 2, q.y - 2, 4, 4); }
-  for (const u of g.units) { const q = mp(u.x, u.y); ctx.fillStyle = u.team === 0 ? '#f6f' : CFG.teams[u.team].color; ctx.fillRect(q.x - 1, q.y - 1, 2.5, 2.5); }
+  poly(ctx, [mp(0, 0), mp(N, 0), mp(N, N), mp(0, N)], CFG.fog.enabled ? '#181818' : '#444', null);
+  if (CFG.fog.enabled) {
+    ctx.fillStyle = '#4a4a4a';
+    for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) if (V.seen[i * N + j]) { const q = mp(i + 0.5, j + 0.5); ctx.fillRect(q.x - m.w / N / 2 * 0.92 - 0.3, q.y - m.h / N / 2 * 0.92 - 0.3, m.w / N * 0.92 + 0.6, m.h / N * 0.92 + 0.6); }
+  }
+  for (const p of g.points) { if (!isSeen(V, p.x, p.y)) continue; const q = mp(p.x, p.y); ctx.fillStyle = teamColor(ownerOf(p)); ctx.fillRect(q.x - 2, q.y - 2, 4, 4); }
+  for (const u of g.units) { if (u.team !== 0 && !isVisible(V, u.x, u.y)) continue; const q = mp(u.x, u.y); ctx.fillStyle = u.team === 0 ? '#f6f' : CFG.teams[u.team].color; ctx.fillRect(q.x - 1, q.y - 1, 2.5, 2.5); }
   const vc = fromWorld(cam.x, cam.y), q = mp(vc.i, vc.j);
   ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.strokeRect(q.x - 18, q.y - 10, 36, 20);
 }

@@ -4,6 +4,7 @@ import { createAI, stepAI } from './ai.js';
 import { render, toScreen, toWorld, clampCam } from './iso.js';
 import { bindInput } from './input.js';
 import { createFx } from './fx.js';
+import { createVision, updateVision, isVisible } from './vision.js';
 import { unlockAudio, playEvent, setMuted, isMuted, clickSound } from './audio.js';
 
 const canvas = document.getElementById('c');
@@ -14,7 +15,8 @@ let game = createGame();
 let ais = [1, 2, 3].map(createAI);
 const cam = { x: 0, y: 0, zoom: 1, w: 0, h: 0 };
 const fx = createFx();
-const ui = { selected: new Set(), box: null, time: 0, fx, project: (i, j) => toScreen(cam, i, j) };
+const vision = createVision();
+const ui = { selected: new Set(), box: null, time: 0, fx, vision, project: (i, j) => toScreen(cam, i, j) };
 
 function fit() {
   const dpr = window.devicePixelRatio || 1;
@@ -41,14 +43,16 @@ document.getElementById('all').addEventListener('click', clickSound);
 const prodBtns = [...document.querySelectorAll('[data-prod]')];
 const showProd = () => prodBtns.forEach(b => b.classList.toggle('on', game.teams[0].prod === b.dataset.prod));
 prodBtns.forEach(b => b.onclick = () => { game.teams[0].prod = b.dataset.prod; showProd(); clickSound(); });
-document.getElementById('restart').onclick = () => { game = createGame(); ais = [1, 2, 3].map(createAI); ui.selected.clear(); msg.hidden = true; focusBase(); };
+document.getElementById('restart').onclick = () => { game = createGame(); ui.vision = createVision(); ais = [1, 2, 3].map(createAI); ui.selected.clear(); msg.hidden = true; focusBase(); };
 
 let last = performance.now(), acc = 0;
 const DT = 1 / 20;
 function frame(now) {
   acc += Math.min(0.25, (now - last) / 1000); last = now;
   while (acc >= DT) { ais.forEach(a => stepAI(game, a, DT)); step(game, DT); fx.update(DT); ui.time += DT; acc -= DT; }
-  for (const e of game.events) { fx.add(e); playEvent(e, 0); }
+  updateVision(ui.vision, game, 0);
+  // sis altındaki olayların efekti ve sesi oyuncuya sızmaz
+  for (const e of game.events) if (e.team === 0 || isVisible(ui.vision, e.x, e.y)) { fx.add(e); playEvent(e, 0); }
   game.events.length = 0;
   for (const id of [...ui.selected]) if (!game.units.some(u => u.id === id)) ui.selected.delete(id);
   render(ctx, cam, game, ui);

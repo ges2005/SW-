@@ -36,8 +36,10 @@ Mantık ayrı olduğu için çizim/girdi değişse (başka kamera, yeni ekran) m
   - Yapay zeka, en kalabalık düşman türünü yenen türü üretir.
   - Test: türlerin 1'e 1 düello sonuçları ve kule hasarı `npm test` içinde.
 
+- **Aşama 2b — Sis ve görüş (`src/vision.js`):** her birimin görüş menzili türe bağlı (okçu 6, piyon 5, zırhlı 4), sahip olunan noktalar 5, ana nokta 7 kare görüyor. Üç durum: keşfedilmemiş (koyu), görülmüş ama şu an görünmeyen (yarı soluk, noktalar son bilinen sahibiyle çizilir), görünen. Sisteki düşman birimleri, vuruş efektleri ve sesleri oyuncuya sızmaz. Mini harita da aynı sisi uygular. `CFG.fog.enabled` ile kapatılabilir.
+  - Bilinen sınır: yapay zeka takımları sisten etkilenmiyor (tüm haritayı görüyor). Zorluk seviyeleri aşamasında kendi görüşleriyle sınırlanacak.
+
 ## Sıradaki aşamalar
-2b. **Sis ve görüş** (henüz yok): her birim/noktanın görüş alanı, görülmeyen düşman gizli.
 3. **Komutlar:** birim grupları, saldırı-hareket ayrımı, durma komutu (mobilde buton).
 4. **Yapay zeka:** zorluk seviyeleri, savunma, geri çekilme, birimleri toplama.
 5. **İçerik:** rastgele harita, bölümler/modlar, öğretici.

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { createGame, step, commandMove, ownedCount, capacity, spawnUnit } from '../src/sim.js';
 import { createAI, stepAI } from '../src/ai.js';
+import { createVision, updateVision, isVisible, isSeen } from '../src/vision.js';
 
 const g = createGame();
 assert.equal(g.points.filter(p => p.base).length, 4);
@@ -33,6 +34,18 @@ const tw = gt.points.find(p => p.kind === 'kule'); tw.owner = 0;
 const victim = spawnUnit(gt, 1, 'piyon', tw.x + 2, tw.y);
 for (let i = 0; i < 20 * 5; i++) step(gt, 0.05);
 assert.ok(!gt.units.includes(victim) || victim.hp < victim.maxHp, 'kule hasar vermeli');
+
+// Sis: kendi üssü görünür, rakip üssü görünmez; birim gidince görülmüş (seen) olur
+const gv = createGame(), vv = createVision(); updateVision(vv, gv, 0);
+const myBase = gv.points.find(p => p.base && p.team === 0), foeBase = gv.points.find(p => p.base && p.team === 2);
+assert.ok(isVisible(vv, myBase.x, myBase.y), 'kendi üssü görünmeli');
+assert.ok(!isVisible(vv, foeBase.x, foeBase.y) && !isSeen(vv, foeBase.x, foeBase.y), 'rakip üssü sis altında');
+assert.equal(vv.known[foeBase.id], undefined);
+const scout = gv.units.find(u => u.team === 0); scout.x = foeBase.x + 1; scout.y = foeBase.y + 1;
+updateVision(vv, gv, 0);
+assert.ok(isVisible(vv, foeBase.x, foeBase.y) && vv.known[foeBase.id] === 2, 'keşif yapınca görünür ve bilinir');
+scout.x = myBase.x; scout.y = myBase.y; updateVision(vv, gv, 0);
+assert.ok(!isVisible(vv, foeBase.x, foeBase.y) && isSeen(vv, foeBase.x, foeBase.y), 'uzaklaşınca görülmüş ama görünmez');
 
 // Yapay zeka ile uzun koşu: çökmemeli, kapasite aşılmamalı
 const g2 = createGame();
