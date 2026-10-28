@@ -4,6 +4,10 @@
   "type": "module",
   "scripts": {
     "start": "python3 -m http.server 8080",
-    "test": "node test/sim.test.js"
+    "test": "node test/sim.test.js",
+    "e2e": "node test/e2e.cjs",
+    "pwa": "node test/pwa.cjs",
+    "balance": "node test/ai-balance.js",
+    "snowball": "node test/snowball.js 100"
   }
 }

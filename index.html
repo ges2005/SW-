@@ -4,6 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>İzometrik Strateji</title>
+<meta name="theme-color" content="#06264d">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Strateji">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <style>
   html,body{margin:0;height:100%;overflow:hidden;background:#06264d;font-family:system-ui,sans-serif;overscroll-behavior:none}
   canvas{display:block;width:100vw;height:100vh;touch-action:none;-webkit-user-select:none;user-select:none}
@@ -36,6 +44,15 @@
   #tut button{min-height:40px;min-width:56px;padding:0 10px;font-size:14px;background:#fff}
   #tut span{font-weight:700;opacity:.7}
   #msg{z-index:5;position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:#000a;color:#fff;font-size:36px}
+  /* yatay (kısa) ekran: komutlar iki sütun, daha küçük düğmeler */
+  @media (max-height:520px){
+    #cmd{flex-direction:row;flex-wrap:wrap;width:192px;bottom:112px;gap:6px}
+    #cmd button{min-width:90px;min-height:44px;font-size:14px}
+    button{min-height:44px}
+    #prod{bottom:calc(max(8px,env(safe-area-inset-bottom)) + 52px)}
+    #menu{font-size:16px;gap:10px}
+    #menu h1{font-size:22px}
+  }
 </style>
 </head>
 <body>

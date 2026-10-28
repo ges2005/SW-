@@ -155,3 +155,6 @@ function frame(now) {
 requestAnimationFrame(frame);
 $('tut-skip').onclick = () => { if (tut) tut.skip(); };
 window.__game = () => ({ game, cam, ui }); // test/hata ayıklama için
+
+// PWA: internetsiz çalışma için hizmet çalışanı (yalnızca https ya da localhost'ta kayıt olur)
+if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));

@@ -63,7 +63,7 @@ Mantık ayrı olduğu için çizim/girdi değişse (başka kamera, yeni ekran) m
   - Bilinmeyen: rastgele haritalarda yapay zekanın dengesi ayrıca ölçülmedi (yalnızca çalıştığı test edildi).
 
 - **Dengeleme ve geri dönüş (goal 2. madde):**
-  - Zorluk sıralaması rastgele haritalarda da korunuyor (`RAND=1 node test/ai-balance.js ...`). 96 oyunluk örnekte zor normale göre +%42 (klasik) / +%49 (rastgele) nokta; normal kolaya göre +%54 / +%300.
+  - Zorluk sıralaması rastgele haritalarda da korunuyor (`RAND=1 node test/ai-balance.js ...`). 96 oyunluk örnekte zor normale göre +%42 (klasik) / +%49 (rastgele) nokta. Normal kolaya göre ise yalnızca 32 oyunluk örnekte ölçüldü (klasik 5.7 / 3.7, rastgele 8.0 / 2.0); bu daha gürültülü.
   - Kartopu ölçümü (`node test/snowball.js 100`): taban çizgide 120. saniyedeki lider sonda %91 önde, ortalama oyun 139 sn, oyunların yarısı 120 sn'ye varmadan bitiyor.
   - **Denenen 1:** üretim süresi lastik bandı (liderin %50 altındaki takım hızlanır): sonuç değişmedi (%94).
   - **Denenen 2:** güçlü lastik bant (%70 / x0.4): lider-kalma %55'e düştü ama zorluk sıralaması bozuldu (kolay, normali geçti) → **kaldırıldı**. Beceri farkı ile kartopu aynı şey; ikisini birden korumak için zayıf mekanik gerekir.
