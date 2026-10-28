@@ -38,6 +38,9 @@ document.getElementById('all').onclick = () => { ui.selected.clear(); game.units
 document.getElementById('none').onclick = () => ui.selected.clear();
 document.getElementById('base').onclick = focusBase;
 document.getElementById('all').addEventListener('click', clickSound);
+const prodBtns = [...document.querySelectorAll('[data-prod]')];
+const showProd = () => prodBtns.forEach(b => b.classList.toggle('on', game.teams[0].prod === b.dataset.prod));
+prodBtns.forEach(b => b.onclick = () => { game.teams[0].prod = b.dataset.prod; showProd(); clickSound(); });
 document.getElementById('restart').onclick = () => { game = createGame(); ais = [1, 2, 3].map(createAI); ui.selected.clear(); msg.hidden = true; focusBase(); };
 
 let last = performance.now(), acc = 0;
@@ -49,8 +52,8 @@ function frame(now) {
   game.events.length = 0;
   for (const id of [...ui.selected]) if (!game.units.some(u => u.id === id)) ui.selected.delete(id);
   render(ctx, cam, game, ui);
-  const t = 0;
-  hud.textContent = `Nokta ${ownedCount(game, t)} · Birim ${unitCount(game, t)}/${capacity(game, t)} · Üretim ${spawnInterval(game, t).toFixed(1)}sn · Güç x${buff(game, t).toFixed(2)}`;
+  const t = 0; showProd();
+  hud.textContent = `Nokta ${ownedCount(game, t)} · Birim ${unitCount(game, t)}/${capacity(game, t)} · Üretim ${(spawnInterval(game, t) * CFG.types[game.teams[0].prod].cost).toFixed(1)}sn · Güç x${buff(game, t).toFixed(2)}`;
   if (game.winner !== -1) { msg.hidden = false; msg.firstChild.textContent = game.winner === 0 ? 'Kazandın!' : 'Kaybettin'; }
   requestAnimationFrame(frame);
 }

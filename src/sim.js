@@ -3,6 +3,7 @@ import { CFG } from './config.js';
 
 const N = CFG.mapSize;
 const C = N / 2;
+const KINDS = ['eko', 'eko', 'demirci', 'kule']; // yerel noktaların türleri (layout sırasıyla)
 const rot = ([x, y]) => [-y, x]; // merkez etrafında 90 derece
 
 function layout() {
@@ -12,21 +13,21 @@ function layout() {
   const points = [];
   let b = base, l = local;
   for (let t = 0; t < 4; t++) {
-    points.push({ x: C + b[0], y: C + b[1], owner: t, base: true, team: t });
-    l.forEach(p => points.push({ x: C + p[0], y: C + p[1], owner: -1 }));
+    points.push({ x: C + b[0], y: C + b[1], owner: t, base: true, team: t, kind: 'ana' });
+    l.forEach((p, k) => points.push({ x: C + p[0], y: C + p[1], owner: -1, kind: KINDS[k] }));
     b = rot(b); l = l.map(rot);
   }
-  points.push({ x: C, y: C, owner: -1 });
-  return points.map((p, i) => ({ id: i, prog: 0, capTeam: -1, suit: i % 2 ? 'S' : 'H', ...p }));
+  points.push({ x: C, y: C, owner: -1, kind: 'kule' });
+  return points.map((p, i) => ({ id: i, prog: 0, capTeam: -1, cd: 0, suit: i % 2 ? 'S' : 'H', ...p }));
 }
 
 export function createGame() {
   const g = {
     t: 0, nextId: 1, units: [], points: layout(),
-    teams: CFG.teams.map((_, i) => ({ id: i, alive: true, spawnT: 0 })),
+    teams: CFG.teams.map((_, i) => ({ id: i, alive: true, spawnT: 0, prod: 'piyon' })),
     winner: -1, events: [], // çizim/ses katmanının tükettiği olaylar
   };
-  for (let t = 0; t < 4; t++) for (let k = 0; k < 3; k++) spawn(g, t, k);
+  for (let t = 0; t < 4; t++) for (let k = 0; k < 3; k++) spawn(g, t, k, 'piyon');
   return g;
 }
 
@@ -37,18 +38,25 @@ export const spawnInterval = (g, t) => {
   return Math.max(e.spawnMin, e.spawnBase - e.spawnPerPoint * (ownedCount(g, t) - 1));
 };
 export const capacity = (g, t) => CFG.economy.capBase + CFG.economy.capPerPoint * (ownedCount(g, t) - 1);
-export const buff = (g, t) => 1 + CFG.economy.buffPerPoint * (ownedCount(g, t) - 1);
+export const buff = (g, t) => {
+  const forges = g.points.filter(p => p.owner === t && p.kind === 'demirci').length;
+  return 1 + CFG.economy.buffPerPoint * (ownedCount(g, t) - 1 + forges);
+};
+const mult = (a, d) => (a === d ? 1 : CFG.types[a].beats === d ? CFG.counter.advantage : CFG.types[d].beats === a ? CFG.counter.disadvantage : 1);
 
 function basePoint(g, t) { return g.points.find(p => p.base && p.team === t); }
 
-function spawn(g, t, k = 0) {
+export function spawnUnit(g, t, type, x, y) {
+  const hp = CFG.types[type].hp * buff(g, t);
+  const u = { id: g.nextId++, team: t, type, x, y, hp, maxHp: hp, tx: null, ty: null, cd: 0, atk: 0, moving: false, fx: 0, fy: 0 };
+  g.units.push(u);
+  return u;
+}
+
+function spawn(g, t, k = 0, type = g.teams[t].prod) {
   const b = basePoint(g, t);
   const a = k * 2.1;
-  const hp = CFG.unit.hp * buff(g, t);
-  g.units.push({
-    id: g.nextId++, team: t, x: b.x + Math.cos(a) * 1.2, y: b.y + Math.sin(a) * 1.2,
-    hp, maxHp: hp, tx: null, ty: null, cd: 0, atk: 0, moving: false, fx: 0, fy: 0,
-  });
+  spawnUnit(g, t, type, b.x + Math.cos(a) * 1.2, b.y + Math.sin(a) * 1.2);
   g.events.push({ type: 'spawn', x: b.x, y: b.y, team: t });
 }
 
@@ -65,13 +73,12 @@ export function commandMove(g, ids, x, y) {
 export function step(g, dt) {
   if (g.winner !== -1) return;
   g.t += dt;
-  const U = CFG.unit;
 
   // üretim
   for (const tm of g.teams) {
     if (!tm.alive) continue;
     tm.spawnT += dt;
-    if (tm.spawnT >= spawnInterval(g, tm.id)) {
+    if (tm.spawnT >= spawnInterval(g, tm.id) * CFG.types[tm.prod].cost) {
       tm.spawnT = 0;
       if (unitCount(g, tm.id) < capacity(g, tm.id)) spawn(g, tm.id, g.nextId);
     }
@@ -88,16 +95,17 @@ export function step(g, dt) {
       const d = Math.hypot(v.x - u.x, v.y - u.y);
       if (d < fd) { fd = d; foe = v; }
     }
+    const U = CFG.types[u.type];
     if (foe && fd <= U.range) {
       u.fx = (foe.x - u.x) / (fd || 1); u.fy = (foe.y - u.y) / (fd || 1);
       if (u.cd === 0) {
-        foe.hp -= U.dmg * buff(g, u.team); u.cd = U.cooldown; u.atk = 0.25;
-        g.events.push({ type: 'hit', x: foe.x, y: foe.y, team: u.team });
+        foe.hp -= U.dmg * buff(g, u.team) * mult(u.type, foe.type); u.cd = U.cooldown; u.atk = 0.25;
+        g.events.push({ type: 'hit', x: foe.x, y: foe.y, team: u.team, from: U.range > 2 ? { x: u.x, y: u.y } : null });
       }
       continue; // dövüşürken yerinde durur
     }
     let gx = u.tx, gy = u.ty;
-    if (gx === null && foe && fd <= U.sight) { gx = foe.x; gy = foe.y; } // boştaki birim yakındakine saldırır
+    if (gx === null && foe && fd <= CFG.sight) { gx = foe.x; gy = foe.y; } // boştaki birim yakındakine saldırır
     if (gx !== null) {
       const dx = gx - u.x, dy = gy - u.y, d = Math.hypot(dx, dy);
       if (d < 0.1) { if (u.tx !== null && gx === u.tx) { u.tx = u.ty = null; } }
@@ -109,6 +117,15 @@ export function step(g, dt) {
     const a = g.units[i], b = g.units[j];
     const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy);
     if (d > 0 && d < 0.5) { const p = (0.5 - d) / 2 / d; a.x -= dx * p; a.y -= dy * p; b.x += dx * p; b.y += dy * p; }
+  }
+  // kuleler: sahibi olan takımın birimi dışındaki en yakın düşmana ateş eder
+  for (const p of g.points) {
+    if (p.kind !== 'kule' || p.owner < 0) continue;
+    p.cd = Math.max(0, p.cd - dt);
+    if (p.cd > 0) continue;
+    let foe = null, fd = CFG.tower.range;
+    for (const v of g.units) { if (v.team === p.owner) continue; const d = Math.hypot(v.x - p.x, v.y - p.y); if (d < fd) { fd = d; foe = v; } }
+    if (foe) { foe.hp -= CFG.tower.dmg * buff(g, p.owner); p.cd = CFG.tower.cooldown; g.events.push({ type: 'hit', x: foe.x, y: foe.y, team: p.owner, from: { x: p.x, y: p.y } }); }
   }
   for (const u of g.units) if (u.hp <= 0) g.events.push({ type: 'death', x: u.x, y: u.y, team: u.team });
   g.units = g.units.filter(u => u.hp > 0);

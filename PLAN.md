@@ -23,16 +23,23 @@ Mantık ayrı olduğu için çizim/girdi değişse (başka kamera, yeni ekran) m
 - Her yeni özellik için kural: "parmakla nasıl yapılır?" sorusu cevaplanmadan eklenmez.
 
 ## Şu an çalışan (Aşama 1 prototip)
-24x24 izometrik harita, 4 takım (köşelerde), 21 nokta (simetrik dizilim), noktada bekleyerek ele geçirme, nokta sayısına bağlı üretim hızı / kapasite / güç buff'ı, otomatik savaş, 3 yapay zeka takımı, mini harita, mobil girdi.
+24x24 izometrik harita, 4 takım (köşelerde), 21 nokta (simetrik dizilim, 4 tür), noktada bekleyerek ele geçirme, nokta sayısına bağlı üretim hızı / kapasite / güç buff'ı, otomatik savaş, 3 yapay zeka takımı, mini harita, mobil girdi.
 `npm start` ile http://localhost:8080 adresinde açılır. `npm test` mantık testini koşar.
 
 **Geçici kararlar (değiştirilebilir):** ana noktası düşen takım elenir, kalan tek takım kazanır; buff her ek nokta için +%5 hp/hasar; üretim 6sn'den noktayla azalır (en az 1.5sn); kapasite 6 + 3/nokta.
 
+## Tamamlanan aşamalar
+- **Aşama 1 — Hissiyat:** yürüme sekmesi, vuruş atılması, kıvılcım, ölüm efekti, ele geçirme dalgası, üretim halkası, WebAudio sesleri (mobilde ilk dokunuşta açılır, ses düğmesi var). Efektler `src/fx.js`, sesler `src/audio.js`; mantık yalnızca olay (`events`) üretir.
+- **Aşama 2 (kısmen) — Derinlik:**
+  - Birim türleri: Piyon > Okçu > Zırhlı > Piyon (üstünlük x1.5, dezavantaj x0.75). Okçu menzilli (3.2), zırhlı yavaş ve dayanıklı, her tür farklı üretim maliyetinde. Üretilecek tür sol alttaki ⚔️ 🏹 🛡️ butonlarıyla seçilir.
+  - Nokta türleri: ♥/♠ ekonomi, ♦ demirci (buff için 2 nokta sayılır), ♣ kule (yakın düşmana ateş eder).
+  - Yapay zeka, en kalabalık düşman türünü yenen türü üretir.
+  - Test: türlerin 1'e 1 düello sonuçları ve kule hasarı `npm test` içinde.
+
 ## Sıradaki aşamalar
-1. **Hissiyat:** saldırı/ölüm animasyonu, ses, ele geçirme efekti, yürüme animasyonu.
-2. **Derinlik:** birim türleri ve karşıtlık, nokta türleri (üretim/savunma/kaynak), sis ve görüş.
-3. **Komutlar:** birim grupları, saldırı-hareket ayrımı, durma komutu (mobilde buton, masaüstünde de sol tık).
+2b. **Sis ve görüş** (henüz yok): her birim/noktanın görüş alanı, görülmeyen düşman gizli.
+3. **Komutlar:** birim grupları, saldırı-hareket ayrımı, durma komutu (mobilde buton).
 4. **Yapay zeka:** zorluk seviyeleri, savunma, geri çekilme, birimleri toplama.
 5. **İçerik:** rastgele harita, bölümler/modlar, öğretici.
 6. **Paketleme:** PWA, sonra Capacitor ile mobil uygulama.
-7. **Dengeleme:** kartopu etkisini sınırlayan geri dönüş mekanikleri.
+7. **Dengeleme:** kartopu etkisini sınırlayan geri dönüş mekanikleri; tür ve nokta değerlerinin oyun testiyle ayarı.
