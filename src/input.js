@@ -8,7 +8,7 @@ import { commandMove } from './sim.js';
 //   iki parmak / tekerlek -> yakınlaştır
 export function bindInput(canvas, cam, getGame, ui) {
   const ptrs = new Map();
-  let drag = null, pinch = null, holdTimer = null;
+  let drag = null, pinch = null, holdTimer = null, lastTap = { id: -1, t: 0 };
   const MOVE = 8, HOLD = 350;
 
   const pos = e => { const r = canvas.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
@@ -39,10 +39,22 @@ export function bindInput(canvas, cam, getGame, ui) {
       const d = Math.hypot(s.x - p.x, s.y - p.y + 18 * cam.zoom);
       if (d < bd) { bd = d; best = u; }
     }
-    if (best) { ui.selected.clear(); ui.selected.add(best.id); return; }
+    if (best) {
+      const now = performance.now();
+      ui.selected.clear(); ui.selected.add(best.id);
+      if (lastTap.id === best.id && now - lastTap.t < 350) { // çift dokunma: ekrandaki aynı türden tüm birimler
+        for (const u of g.units) {
+          if (u.team !== 0 || u.type !== best.type) continue;
+          const s = ui.project(u.x, u.y);
+          if (s.x >= 0 && s.x <= cam.w && s.y >= 0 && s.y <= cam.h) ui.selected.add(u.id);
+        }
+      }
+      lastTap = { id: best.id, t: now };
+      return;
+    }
     if (ui.selected.size) {
       const t = toTile(cam, p.x, p.y);
-      commandMove(g, [...ui.selected], Math.max(0, Math.min(24, t.i)), Math.max(0, Math.min(24, t.j)));
+      commandMove(g, [...ui.selected], Math.max(0, Math.min(24, t.i)), Math.max(0, Math.min(24, t.j)), ui.mode);
     }
   }
 

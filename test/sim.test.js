@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { createGame, step, commandMove, ownedCount, capacity, spawnUnit } from '../src/sim.js';
+import { createGame, step, commandMove, commandStop, ownedCount, capacity, spawnUnit } from '../src/sim.js';
 import { createAI, stepAI } from '../src/ai.js';
 import { createVision, updateVision, isVisible, isSeen } from '../src/vision.js';
 
@@ -27,6 +27,31 @@ function duel(a, b) {
 assert.equal(duel('piyon', 'okcu'), 'piyon');
 assert.equal(duel('okcu', 'zirh'), 'okcu');
 assert.equal(duel('zirh', 'piyon'), 'zirh');
+
+// Komutlar: 'move' savaşmaz (geri çekilme), 'attack' vurur, 'Dur' kovalamaz
+function arena() { const d = createGame(); d.units = []; d.teams.forEach(t => { t.spawnT = -1e9; }); return d; }
+{
+  const d = arena(); const a = spawnUnit(d, 0, 'piyon', 5, 12), e = spawnUnit(d, 1, 'piyon', 5.8, 12);
+  commandMove(d, [a.id], 15, 12, 'move');
+  for (let i = 0; i < 10; i++) step(d, 0.05);
+  assert.equal(e.hp, e.maxHp, 'koşan birim vurmamalı'); assert.ok(a.x > 5.5, 'koşan birim ilerlemeli');
+}
+{
+  const d = arena(); const a = spawnUnit(d, 0, 'piyon', 5, 12), e = spawnUnit(d, 1, 'piyon', 5.8, 12);
+  commandMove(d, [a.id], 15, 12, 'attack');
+  for (let i = 0; i < 10; i++) step(d, 0.05);
+  assert.ok(e.hp < e.maxHp, 'saldır kipinde birim vurmalı');
+}
+{
+  const d = arena(); const a = spawnUnit(d, 0, 'piyon', 5, 12); const e = spawnUnit(d, 1, 'piyon', 8, 12);
+  commandStop(d, [a.id]); const x0 = a.x;
+  for (let i = 0; i < 10; i++) { step(d, 0.05); e.x = 8; } // düşmanı menzil dışında sabit tut
+  assert.equal(a.x, x0, 'dur komutundaki birim kovalamamalı');
+  const b = spawnUnit(d, 0, 'piyon', 5, 14); const x1 = b.x, y1 = b.y;
+  spawnUnit(d, 1, 'piyon', 8, 14);
+  for (let i = 0; i < 10; i++) step(d, 0.05);
+  assert.ok(Math.hypot(b.x - x1, b.y - y1) > 0.5, 'boştaki birim yakındaki düşmanı kovalar');
+}
 
 // Kule: yakındaki düşmana ateş eder
 const gt = createGame(); gt.units = []; gt.teams.forEach(t => { t.spawnT = -1e9; });

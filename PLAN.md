@@ -39,8 +39,14 @@ Mantık ayrı olduğu için çizim/girdi değişse (başka kamera, yeni ekran) m
 - **Aşama 2b — Sis ve görüş (`src/vision.js`):** her birimin görüş menzili türe bağlı (okçu 6, piyon 5, zırhlı 4), sahip olunan noktalar 5, ana nokta 7 kare görüyor. Üç durum: keşfedilmemiş (koyu), görülmüş ama şu an görünmeyen (yarı soluk, noktalar son bilinen sahibiyle çizilir), görünen. Sisteki düşman birimleri, vuruş efektleri ve sesleri oyuncuya sızmaz. Mini harita da aynı sisi uygular. `CFG.fog.enabled` ile kapatılabilir.
   - Bilinen sınır: yapay zeka takımları sisten etkilenmiyor (tüm haritayı görüyor). Zorluk seviyeleri aşamasında kendi görüşleriyle sınırlanacak.
 
+- **Aşama 3 — Komutlar:**
+  - Kipler (sağdaki buton): **⚔️ Saldır** (varsayılan; yolda gördüğü düşmanı kovalar, sonra yoluna devam eder) ve **🏃 Yürü** (düşmanı yok sayıp koşar, geri çekilme için).
+  - **✋ Dur:** hedefi iptal eder, mevzi tutar (yalnızca menzildeki düşmana vurur, kovalamaz).
+  - **Gruplar 1-3:** boş gruba dokun = seçimi kaydet, dolu gruba dokun = seç, basılı tut = üzerine yaz. Düğmede grup boyutu görünür.
+  - **Çift dokunma:** bir birime iki kez dokununca ekrandaki aynı türden tüm birimler seçilir.
+  - Masaüstü bonusu (isteğe bağlı): 1-3 seç, Ctrl+1-3 kaydet, S dur, A kip değiştir. Oyun yalnızca sol tıkla da tam oynanır.
+
 ## Sıradaki aşamalar
-3. **Komutlar:** birim grupları, saldırı-hareket ayrımı, durma komutu (mobilde buton).
 4. **Yapay zeka:** zorluk seviyeleri, savunma, geri çekilme, birimleri toplama.
 5. **İçerik:** rastgele harita, bölümler/modlar, öğretici.
 6. **Paketleme:** PWA, sonra Capacitor ile mobil uygulama.

@@ -48,7 +48,7 @@ function basePoint(g, t) { return g.points.find(p => p.base && p.team === t); }
 
 export function spawnUnit(g, t, type, x, y) {
   const hp = CFG.types[type].hp * buff(g, t);
-  const u = { id: g.nextId++, team: t, type, x, y, hp, maxHp: hp, tx: null, ty: null, cd: 0, atk: 0, moving: false, fx: 0, fy: 0 };
+  const u = { id: g.nextId++, team: t, type, x, y, hp, maxHp: hp, tx: null, ty: null, mode: 'attack', hold: false, cd: 0, atk: 0, moving: false, fx: 0, fy: 0 };
   g.units.push(u);
   return u;
 }
@@ -60,14 +60,24 @@ function spawn(g, t, k = 0, type = g.teams[t].prod) {
   g.events.push({ type: 'spawn', x: b.x, y: b.y, team: t });
 }
 
-export function commandMove(g, ids, x, y) {
+// Komut kipleri:
+//   'attack' (varsayılan): yolda gördüğü düşmana saldırır, bitince yoluna devam eder
+//   'move': düşmanı yok sayıp koşar (geri çekilme); varınca normale döner
+export function commandMove(g, ids, x, y, mode = 'attack') {
   const set = new Set(ids);
   const us = g.units.filter(u => set.has(u.id));
   us.forEach((u, i) => { // hedef çevresinde dağıt
+    u.mode = mode; u.hold = false;
     const a = i * 2.4, r = Math.sqrt(i) * 0.45;
     u.tx = Math.min(N - .5, Math.max(.5, x + Math.cos(a) * r));
     u.ty = Math.min(N - .5, Math.max(.5, y + Math.sin(a) * r));
   });
+}
+
+// Dur: hedefi iptal eder ve mevzi tutar (yalnızca menzildeki düşmana vurur, kovalamaz)
+export function commandStop(g, ids) {
+  const set = new Set(ids);
+  for (const u of g.units) if (set.has(u.id)) { u.tx = u.ty = null; u.hold = true; }
 }
 
 export function step(g, dt) {
@@ -96,7 +106,8 @@ export function step(g, dt) {
       if (d < fd) { fd = d; foe = v; }
     }
     const U = CFG.types[u.type];
-    if (foe && fd <= U.range) {
+    const marching = u.tx !== null && u.mode === 'move'; // koşarken savaşmaz
+    if (!marching && foe && fd <= U.range) {
       u.fx = (foe.x - u.x) / (fd || 1); u.fy = (foe.y - u.y) / (fd || 1);
       if (u.cd === 0) {
         foe.hp -= U.dmg * buff(g, u.team) * mult(u.type, foe.type); u.cd = U.cooldown; u.atk = 0.25;
@@ -104,11 +115,12 @@ export function step(g, dt) {
       }
       continue; // dövüşürken yerinde durur
     }
-    let gx = u.tx, gy = u.ty;
-    if (gx === null && foe && fd <= CFG.sight) { gx = foe.x; gy = foe.y; } // boştaki birim yakındakine saldırır
+    let gx = null, gy = null, chase = false;
+    if (!marching && foe && fd <= CFG.sight && !(u.hold && u.tx === null)) { gx = foe.x; gy = foe.y; chase = true; } // yakındaki düşmanı kovala
+    else if (u.tx !== null) { gx = u.tx; gy = u.ty; }
     if (gx !== null) {
       const dx = gx - u.x, dy = gy - u.y, d = Math.hypot(dx, dy);
-      if (d < 0.1) { if (u.tx !== null && gx === u.tx) { u.tx = u.ty = null; } }
+      if (d < 0.1) { if (!chase) { u.tx = u.ty = null; u.mode = 'attack'; } }
       else { const s = Math.min(d, U.speed * dt); u.x += dx / d * s; u.y += dy / d * s; u.moving = true; u.fx = dx / d; u.fy = dy / d; }
     }
   }

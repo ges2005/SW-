@@ -1,5 +1,5 @@
 import { CFG } from './config.js';
-import { createGame, step, ownedCount, unitCount, capacity, spawnInterval, buff } from './sim.js';
+import { createGame, step, commandStop, ownedCount, unitCount, capacity, spawnInterval, buff } from './sim.js';
 import { createAI, stepAI } from './ai.js';
 import { render, toScreen, toWorld, clampCam } from './iso.js';
 import { bindInput } from './input.js';
@@ -16,7 +16,7 @@ let ais = [1, 2, 3].map(createAI);
 const cam = { x: 0, y: 0, zoom: 1, w: 0, h: 0 };
 const fx = createFx();
 const vision = createVision();
-const ui = { selected: new Set(), box: null, time: 0, fx, vision, project: (i, j) => toScreen(cam, i, j) };
+const ui = { selected: new Set(), box: null, time: 0, mode: 'attack', groups: [[], [], []], fx, vision, project: (i, j) => toScreen(cam, i, j) };
 
 function fit() {
   const dpr = window.devicePixelRatio || 1;
@@ -40,10 +40,43 @@ document.getElementById('all').onclick = () => { ui.selected.clear(); game.units
 document.getElementById('none').onclick = () => ui.selected.clear();
 document.getElementById('base').onclick = focusBase;
 document.getElementById('all').addEventListener('click', clickSound);
+
+// Komutlar: kip değiştirme ve dur
+const modeBtn = document.getElementById('mode');
+const showMode = () => { modeBtn.textContent = ui.mode === 'attack' ? '⚔️ Saldır' : '🏃 Yürü'; };
+modeBtn.onclick = () => { ui.mode = ui.mode === 'attack' ? 'move' : 'attack'; showMode(); clickSound(); };
+document.getElementById('stop').onclick = () => { commandStop(game, [...ui.selected]); clickSound(); };
+showMode();
+
+// Gruplar: boşsa dokununca seçimi kaydeder, doluysa seçer; basılı tutunca üzerine yazar
+const groupBtns = [...document.querySelectorAll('[data-group]')];
+const alive = id => game.units.some(u => u.id === id);
+const saveGroup = n => { ui.groups[n] = [...ui.selected].filter(alive); };
+const recallGroup = n => { ui.groups[n] = ui.groups[n].filter(alive); ui.selected.clear(); ui.groups[n].forEach(id => ui.selected.add(id)); };
+groupBtns.forEach(b => {
+  const n = +b.dataset.group; let t = null, long = false;
+  b.addEventListener('pointerdown', () => { long = false; t = setTimeout(() => { long = true; saveGroup(n); clickSound(); }, 500); });
+  const up = () => { clearTimeout(t); };
+  b.addEventListener('pointerleave', up); b.addEventListener('pointercancel', up);
+  b.addEventListener('pointerup', () => {
+    up(); if (long) return;
+    ui.groups[n] = ui.groups[n].filter(alive);
+    if (ui.groups[n].length) recallGroup(n); else if (ui.selected.size) saveGroup(n);
+    clickSound();
+  });
+});
+const showGroups = () => groupBtns.forEach(b => { const n = +b.dataset.group; b.textContent = `${n + 1}·${ui.groups[n].filter(alive).length}`; });
+
+// Masaüstü kısayolları (isteğe bağlı): 1-3 seç, Ctrl+1-3 kaydet, S dur, A kip
+window.addEventListener('keydown', e => {
+  if (e.key >= '1' && e.key <= '3') { const n = +e.key - 1; if (e.ctrlKey || e.metaKey) { e.preventDefault(); saveGroup(n); } else recallGroup(n); }
+  else if (e.key === 's' || e.key === 'S') commandStop(game, [...ui.selected]);
+  else if (e.key === 'a' || e.key === 'A') modeBtn.click();
+});
 const prodBtns = [...document.querySelectorAll('[data-prod]')];
 const showProd = () => prodBtns.forEach(b => b.classList.toggle('on', game.teams[0].prod === b.dataset.prod));
 prodBtns.forEach(b => b.onclick = () => { game.teams[0].prod = b.dataset.prod; showProd(); clickSound(); });
-document.getElementById('restart').onclick = () => { game = createGame(); ui.vision = createVision(); ais = [1, 2, 3].map(createAI); ui.selected.clear(); msg.hidden = true; focusBase(); };
+document.getElementById('restart').onclick = () => { game = createGame(); ui.vision = createVision(); ais = [1, 2, 3].map(createAI); ui.selected.clear(); ui.groups = [[], [], []]; msg.hidden = true; focusBase(); };
 
 let last = performance.now(), acc = 0;
 const DT = 1 / 20;
@@ -56,8 +89,8 @@ function frame(now) {
   game.events.length = 0;
   for (const id of [...ui.selected]) if (!game.units.some(u => u.id === id)) ui.selected.delete(id);
   render(ctx, cam, game, ui);
-  const t = 0; showProd();
-  hud.textContent = `Nokta ${ownedCount(game, t)} · Birim ${unitCount(game, t)}/${capacity(game, t)} · Üretim ${(spawnInterval(game, t) * CFG.types[game.teams[0].prod].cost).toFixed(1)}sn · Güç x${buff(game, t).toFixed(2)}`;
+  const t = 0; showProd(); showGroups();
+  hud.textContent = `Nokta ${ownedCount(game, t)} · Birim ${unitCount(game, t)}/${capacity(game, t)} · Üretim ${(spawnInterval(game, t) * CFG.types[game.teams[0].prod].cost).toFixed(1)}sn · Güç x${buff(game, t).toFixed(2)} · Seçili ${ui.selected.size}`;
   if (game.winner !== -1) { msg.hidden = false; msg.firstChild.textContent = game.winner === 0 ? 'Kazandın!' : 'Kaybettin'; }
   requestAnimationFrame(frame);
 }
