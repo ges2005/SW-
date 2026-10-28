@@ -40,12 +40,11 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
       - name: Yayın klasörünü hazırla (sürüm kimliği hizmet çalışanına yazılır)
-        run: |
-          mkdir dist
-          cp -r index.html manifest.webmanifest sw.js src icons dist/
-          sed -i "s/const VERSION = 'dev';/const VERSION = '${GITHUB_SHA::7}';/" dist/sw.js
-          grep VERSION dist/sw.js | head -1
+        run: npm run build:web
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

@@ -8,6 +8,13 @@
     "e2e": "node test/e2e.cjs",
     "pwa": "node test/pwa.cjs",
     "balance": "node test/ai-balance.js",
-    "snowball": "node test/snowball.js 100"
+    "snowball": "node test/snowball.js 100",
+    "build:web": "node scripts/build-web.mjs",
+    "android:sync": "npm run build:web && cap sync android"
+  },
+  "devDependencies": {
+    "@capacitor/android": "^8.6.0",
+    "@capacitor/cli": "^8.6.0",
+    "@capacitor/core": "^8.6.0"
   }
 }
