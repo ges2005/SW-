@@ -1,33 +1,17 @@
 // Saf oyun mantığı: çizim ve girdiden bağımsız. Tarayıcıda da Node'da da çalışır.
 import { CFG } from './config.js';
+import { buildPoints } from './mapgen.js';
 
 const N = CFG.mapSize;
-const C = N / 2;
-const KINDS = ['eko', 'eko', 'demirci', 'kule']; // yerel noktaların türleri (layout sırasıyla)
-const rot = ([x, y]) => [-y, x]; // merkez etrafında 90 derece
-
-function layout() {
-  // Takım 0 sektörü (merkezden sapma); diğer takımlar döndürülerek simetrik kurulur.
-  const base = [9, -9];
-  const local = [[6, -9], [9, -6], [5, -5], [0, -7]];
-  const points = [];
-  let b = base, l = local;
-  for (let t = 0; t < 4; t++) {
-    points.push({ x: C + b[0], y: C + b[1], owner: t, base: true, team: t, kind: 'ana' });
-    l.forEach((p, k) => points.push({ x: C + p[0], y: C + p[1], owner: -1, kind: KINDS[k] }));
-    b = rot(b); l = l.map(rot);
-  }
-  points.push({ x: C, y: C, owner: -1, kind: 'kule' });
-  return points.map((p, i) => ({ id: i, prog: 0, capTeam: -1, cd: 0, suit: i % 2 ? 'S' : 'H', ...p }));
-}
-
-export function createGame() {
+// opts: { seed: 0 = klasik harita, seats: oyundaki takımlar, startUnits: başlangıç birimi }
+export function createGame(opts = {}) {
+  const { seed = 0, seats = [0, 1, 2, 3], startUnits = 3 } = opts;
   const g = {
-    t: 0, nextId: 1, units: [], points: layout(),
-    teams: CFG.teams.map((_, i) => ({ id: i, alive: true, spawnT: 0, prod: 'piyon' })),
+    t: 0, nextId: 1, units: [], points: buildPoints(seed, seats), seed, seats,
+    teams: CFG.teams.map((_, i) => ({ id: i, alive: seats.includes(i), spawnT: 0, prod: 'piyon' })),
     winner: -1, events: [], // çizim/ses katmanının tükettiği olaylar
   };
-  for (let t = 0; t < 4; t++) for (let k = 0; k < 3; k++) spawn(g, t, k, 'piyon');
+  for (const t of seats) for (let k = 0; k < startUnits; k++) spawn(g, t, k, 'piyon');
   return g;
 }
 

@@ -91,3 +91,41 @@ const ais = [0, 1, 2, 3].map(t => createAI(t));
 for (let i = 0; i < 20 * 600; i++) { ais.forEach(a => stepAI(g2, a, 0.05)); step(g2, 0.05); if (g2.events.length > 400) g2.events.splice(0, 200); }
 for (const t of g2.teams) assert.ok(g2.units.filter(u => u.team === t.id).length <= capacity(g2, t.id) + 3);
 console.log('ok; kazanan:', g2.winner, 'sahip olunan:', [0, 1, 2, 3].map(t => ownedCount(g2, t)));
+
+// Harita üretimi: tekrarlanabilir, adil (4 köşe birebir aynı), geçerli
+import { buildPoints } from '../src/mapgen.js';
+for (const seed of [0, 11, 23, 37, 42, 77, 123, 999, 31337]) {
+  const a = buildPoints(seed), b = buildPoints(seed);
+  assert.deepEqual(a.map(p => [p.x, p.y, p.kind]), b.map(p => [p.x, p.y, p.kind]), 'aynı seed aynı harita');
+  const profile = t => {
+    const base = a.find(p => p.base && p.team === t);
+    return a.filter(p => p !== base).map(p => Math.hypot(p.x - base.x, p.y - base.y).toFixed(2) + p.kind).sort().join(',');
+  };
+  for (let t = 1; t < 4; t++) assert.equal(profile(t), profile(0), `seed ${seed}: takım ${t} adil değil`);
+  for (const p of a) assert.ok(p.x >= 0.5 && p.x <= 23.5 && p.y >= 0.5 && p.y <= 23.5, 'harita içinde');
+  for (let i = 0; i < a.length; i++) for (let j = i + 1; j < a.length; j++) assert.ok(Math.hypot(a[i].x - a[j].x, a[i].y - a[j].y) >= 2.7, `seed ${seed}: noktalar çok yakın`);
+  const kinds = a.map(p => p.kind);
+  assert.ok(kinds.includes('kule') && kinds.includes('demirci') && kinds.filter(k => k === 'eko').length >= 8, 'tür dağılımı');
+}
+assert.notDeepEqual(buildPoints(11).map(p => [p.x, p.y]), buildPoints(23).map(p => [p.x, p.y]), 'farklı seed farklı harita');
+
+// Takım sayısı: kullanılmayan köşe tarafsız noktaya döner; 1'e 1'de rakip elenince oyuncu kazanır
+{
+  const g1 = createGame({ seed: 11, seats: [0, 2] });
+  assert.equal(g1.points.filter(p => p.base).length, 2);
+  assert.equal(g1.units.length, 6);
+  assert.equal(g1.teams.filter(t => t.alive).length, 2);
+  const foe = g1.points.find(p => p.base && p.team === 2);
+  g1.units = []; for (let k = 0; k < 3; k++) spawnUnit(g1, 0, 'piyon', foe.x + 0.3 * k, foe.y);
+  for (let i = 0; i < 20 * 20 && g1.winner === -1; i++) step(g1, 0.05);
+  assert.equal(g1.winner, 0, 'rakibin ana noktası alınınca oyuncu kazanır');
+}
+console.log('harita ve takım testleri tamam');
+
+// Yapay zeka rastgele haritalarda ve eksik takımlarla çalışır
+for (const [seed, seats] of [[11, [0, 2]], [23, [0, 1, 3]], [42, [0, 1, 2, 3]]]) {
+  const g = createGame({ seed, seats }), ais = seats.map(t => createAI(t, 'normal'));
+  for (let i = 0; i < 20 * 240; i++) { ais.forEach(a => stepAI(g, a, 0.05)); step(g, 0.05); g.events.length = 0; }
+  assert.ok(g.points.some(p => p.owner >= 0 && !p.base) || g.winner !== -1, `seed ${seed}: yapay zeka hiç nokta almadı`);
+}
+console.log('rastgele harita yapay zeka testi tamam');

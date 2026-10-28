@@ -10,8 +10,8 @@ export const DIFFICULTY = {
   zor:    { label: 'Zor',    think: 1.0, wave: 4, baseArmy: 7, defend: true,  counter: true,  scout: true,  expand: 2, sloppy: 0, lazy: 0 },
 };
 
-export function createAI(teamId, diff = 'normal') {
-  return { teamId, D: DIFFICULTY[diff] || DIFFICULTY.normal, t: Math.random(), vision: createVision(), claimed: {}, scoutT: 20, prodT: 0 };
+export function createAI(teamId, diff = 'normal', delay = 0) {
+  return { teamId, delay, D: DIFFICULTY[diff] || DIFFICULTY.normal, t: Math.random(), vision: createVision(), claimed: {}, scoutT: 20, prodT: 0 };
 }
 
 const power = u => u.hp * CFG.types[u.type].dmg / CFG.types[u.type].cooldown;
@@ -21,7 +21,7 @@ const centroid = us => ({ x: us.reduce((s, u) => s + u.x, 0) / us.length, y: us.
 
 export function stepAI(g, ai, dt) {
   const T = ai.teamId;
-  if (!g.teams[T].alive) return;
+  if (!g.teams[T].alive || g.t < ai.delay) return; // öğreticide yapay zeka bir süre bekler
   updateVision(ai.vision, g, T);
   ai.t -= dt;
   if (ai.t > 0) return;

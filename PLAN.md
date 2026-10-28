@@ -54,7 +54,14 @@ Mantık ayrı olduğu için çizim/girdi değişse (başka kamera, yeni ekran) m
   - **Ölçüm** (`node test/ai-balance.js zor,normal,zor,normal 8 600`, köşegen ikili düzen, 64 oyun): ortalama nokta zor 6.3 / normal 2.9; normal 6.0 / kolay 3.2; zor 5.5 / kolay 3.5. Sıralama zor > normal > kolay.
   - **Öğrenilenler:** (1) Zırhsız "geri çekilme" (Yürü kipiyle kaçış) birimleri arkadan öldürttüğü için yapay zekayı zayıflattı, kaldırıldı. (2) Ele geçirme 2.5 sn sürdüğü için birimleri hemen başka işe çekmek ağır bedel; (3) denge ölçümünde zorlukları köşegen ikili düzenle karşılaştırmak şart, yoksa zayıf komşusu olan taraf yanlış yüksek görünür.
 
+- **Aşama 5 — İçerik:**
+  - **Harita üretimi (`src/mapgen.js`):** seed'li rastgele harita. Bir sektör üretilip 4 köşeye 90° döndürüldüğü için her takım için birebir adil; her sektörde en az 1 demirci, 1 kule ve 2 ekonomi noktası, noktalar arası en az 2.8 kare. Seed 0 = klasik sabit harita. Aynı seed her zaman aynı haritayı verir ("Harita #123" etiketi). Testler: tekrarlanabilirlik, 4 köşenin eşitliği, sınırlar, türler.
+  - **Takım sayısı:** 1, 2 veya 3 rakip; kullanılmayan köşe tarafsız noktaya dönüşür.
+  - **Bölümler (`src/levels.js`):** Öğretici + 5 bölüm (rakip sayısı, zorluk ve harita artarak), kilit açma, ilerleme `localStorage`'da; bitişte "Sonraki bölüm".
+  - **Hızlı oyun:** zorluk, rakip sayısı (1-3), rastgele/klasik harita seçimi.
+  - **Öğretici (`src/tutorial.js`):** 7 adımlık rehber; her adım yapılınca otomatik ilerler (seçme, gönderme, ele geçirme, üretim türü, kamera, grup, sis ve amaç). "Atla" düğmesi var; öğretici bölümünde rakip ilk 150 saniye hareketsiz.
+  - Bilinmeyen: rastgele haritalarda yapay zekanın dengesi ayrıca ölçülmedi (yalnızca çalıştığı test edildi).
+
 ## Sıradaki aşamalar
-5. **İçerik:** rastgele harita, bölümler/modlar, öğretici.
 6. **Paketleme:** PWA, sonra Capacitor ile mobil uygulama.
 7. **Dengeleme:** kartopu etkisini sınırlayan geri dönüş mekanikleri; tür ve nokta değerlerinin oyun testiyle ayarı.
