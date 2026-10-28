@@ -1,7 +1,7 @@
 # School Wars — Mekanik Dökümü
 
 Kaynaklar: tr.y8.com/games/school_wars sayfası ve "SW Kayıt" oynanış videosu (62 sn, 21 kare incelendi).
-Güven etiketleri: **[Sayfa]** sayfada yazıyor, **[Video]** videoda doğrudan görüldü, **[Çıkarım]** görüntülerden çıkarıldı, **[Bilinmiyor]** kaynaklarda yok.
+Güven etiketleri: **[Kullanıcı]** oyunu bilen kişinin aktardığı bilgi (küçük hatalar olabilir), **[Sayfa]** sayfada yazıyor, **[Video]** videoda doğrudan görüldü, **[Çıkarım]** görüntülerden çıkarıldı, **[Bilinmiyor]** kaynaklarda yok.
 
 ## 1. Genel
 - Tür: gerçek zamanlı taktik/strateji, 1 oyunculu, Flash tabanlı, tarayıcıda çalışır. [Sayfa]
@@ -29,6 +29,7 @@ Güven etiketleri: **[Sayfa]** sayfada yazıyor, **[Video]** videoda doğrudan g
 | İptal | Hedef modunda ekranda "Cancel" butonu | Video |
 | Haritada gezinme | Mini haritaya tıklama/sürükleme; beyaz dikdörtgen görüntü alanını gösteriyor | Video |
 | Tam ekran | Sayfadaki tam ekran düğmesi | Sayfa / Video |
+| Seçme ve hareket | Hem seçme hem ilerletme **sol tık** ile yapılıyor | Kullanıcı |
 | Klavye tuşları | Kısayol atamaları yazılı değil, videoda da kullanım görmedim | Bilinmiyor |
 
 Kayıttaki tüm hareketler fareyle yapılmış. Sayfadaki "Interact" ifadesi de bunu destekliyor.
@@ -39,7 +40,9 @@ Kayıttaki tüm hareketler fareyle yapılmış. Sayfadaki "Interact" ifadesi de 
 - Bir birim noktanın üstünde durunca sembol boyanmaya başlıyor, kısa sürede takım rengine (mor) dönüyor. [Video: 21. ve 24. saniye kareleri]
 - Ele geçirme birimin noktada **beklemesiyle** oluyor; ayrı bir komut görmedim. [Çıkarım]
 - Ele geçirilen noktaların sayısı süreyle artıyor (kayıtta 4–5 mor nokta). [Video]
-- Noktaların puan, kaynak ya da bonus verip vermediği. [Bilinmiyor]
+- Ele geçirilen noktalar takıma **buff** veriyor: birimler güçleniyor, canları artıyor veya üretim hızlanıyor (hangisi olduğu kesin değil). [Kullanıcı]
+- Ele geçirilen nokta sayısı arttıkça **birim üretim hızı** ve **maksimum birim kapasitesi** yükseliyor. [Kullanıcı]
+- Tam buff türü ve nokta başına değer. [Bilinmiyor]
 
 ## 6. Savaş
 - Birimler rakiple temas edince otomatik çatışıyor; ayrı saldırı komutu görmedim. [Çıkarım]
@@ -49,8 +52,8 @@ Kayıttaki tüm hareketler fareyle yapılmış. Sayfadaki "Interact" ifadesi de 
 
 ## 7. Takım büyümesi
 - Sayfa "grow the team" diyor. [Sayfa]
+- Birimler otomatik üretiliyor; hız ve kapasite ele geçirilen nokta sayısına bağlı. [Kullanıcı] Bu, sayfadaki "grow the team" ifadesiyle uyumlu.
 - Videoda bir üretim menüsü, satın alma veya devşirme olayı görmedim. Birim sayısı mini haritadaki nokta sayısına bakılarak değerlendirildiğinde kayıt boyunca belirgin bir artış yok. [Video]
-- Büyümenin ele geçirilen noktalar üzerinden mi (bölge başına yeni birim), zamanla mı, yoksa başka bir yolla mı olduğu belli değil. [Bilinmiyor]
 
 ## 8. Arayüz
 - Sağ alt: elmas biçimli mini harita, renkli takım noktaları, görüntü alanı dikdörtgeni. [Video]
@@ -62,10 +65,10 @@ Kayıttaki tüm hareketler fareyle yapılmış. Sayfadaki "Interact" ifadesi de 
 - Muhtemel kural: tüm noktaları veya tüm rakipleri ele geçirmek. Bu tahmin, oyunun adı ve sayfa açıklamasına dayanıyor. [Çıkarım, doğrulanmadı]
 
 ## 10. Doğrulanması gereken sorular
-1. Birim sayısı nasıl artıyor?
-2. Noktalar bir kaynak, puan ya da avantaj veriyor mu?
+1. Üretim tam olarak nasıl işliyor (süre, üretim yeri)?
+2. Buff'ın kesin türü ve nokta başına değeri nedir?
 3. Kazanma ve kaybetme koşulları nedir?
-4. Klavye kısayolu var mı (grup seçme, duraklatma vb.)?
+4. Klavye kısayolu var mı (grup seçme, duraklatma vb.)? Kullanıcıya göre her şey sol tıkla yapılıyor.
 5. Farklı birim türleri veya bölümler var mı?
 
 Bunları yanıtlamak için oyunun başlangıç menüsünü, öğretici ekranını ve kayıtta olmayan bir oyun sonunu içeren yeni bir video yeterli olur.
