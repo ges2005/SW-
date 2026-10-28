@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createGame, step, commandMove, commandStop, ownedCount, capacity, spawnUnit } from '../src/sim.js';
-import { createAI, stepAI } from '../src/ai.js';
+import { createAI, stepAI, DIFFICULTY } from '../src/ai.js';
 import { createVision, updateVision, isVisible, isSeen } from '../src/vision.js';
 
 const g = createGame();
@@ -72,9 +72,22 @@ assert.ok(isVisible(vv, foeBase.x, foeBase.y) && vv.known[foeBase.id] === 2, 'ke
 scout.x = myBase.x; scout.y = myBase.y; updateVision(vv, gv, 0);
 assert.ok(!isVisible(vv, foeBase.x, foeBase.y) && isSeen(vv, foeBase.x, foeBase.y), 'uzaklaşınca görülmüş ama görünmez');
 
+// Yapay zeka: sisle sınırlı (omniscient değil) ve her zorlukta çalışır
+{
+  const ga = createGame(), ai = createAI(1, 'zor');
+  stepAI(ga, ai, 0.05);
+  const fb = ga.points.find(p => p.base && p.team === 3);
+  assert.ok(!isVisible(ai.vision, fb.x, fb.y) && !isSeen(ai.vision, fb.x, fb.y), 'yapay zeka tüm haritayı görmemeli');
+  for (const d of Object.keys(DIFFICULTY)) {
+    const gb = createGame(), a = [0, 1, 2, 3].map(t => createAI(t, d));
+    for (let i = 0; i < 20 * 120; i++) { a.forEach(x => stepAI(gb, x, 0.05)); step(gb, 0.05); gb.events.length = 0; }
+    assert.ok(gb.units.length > 0, d + ' çökmemeli');
+  }
+}
+
 // Yapay zeka ile uzun koşu: çökmemeli, kapasite aşılmamalı
 const g2 = createGame();
-const ais = [0, 1, 2, 3].map(createAI);
+const ais = [0, 1, 2, 3].map(t => createAI(t));
 for (let i = 0; i < 20 * 600; i++) { ais.forEach(a => stepAI(g2, a, 0.05)); step(g2, 0.05); if (g2.events.length > 400) g2.events.splice(0, 200); }
 for (const t of g2.teams) assert.ok(g2.units.filter(u => u.team === t.id).length <= capacity(g2, t.id) + 3);
 console.log('ok; kazanan:', g2.winner, 'sahip olunan:', [0, 1, 2, 3].map(t => ownedCount(g2, t)));

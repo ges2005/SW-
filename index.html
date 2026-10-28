@@ -18,7 +18,10 @@
   #cmd button{min-width:88px;font-size:15px;padding:0 8px}
   #mute{position:fixed;top:calc(max(8px,env(safe-area-inset-top)) + 46px);right:8px;min-width:48px}
   #msg{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:#000a;color:#fff;font-size:36px}
-  #msg[hidden]{display:none}
+  #msg[hidden],#menu[hidden]{display:none}
+  #menu{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:#000b;color:#fff;font-size:30px}
+  #menu .row{display:flex;gap:10px}
+  #menu .big{min-width:200px;min-height:60px;font-size:22px;background:#ffd24a}
 </style>
 </head>
 <body>
@@ -28,6 +31,7 @@
 <div id="cmd"><button id="mode"></button><button id="stop">✋ Dur</button><button data-group="0">1</button><button data-group="1">2</button><button data-group="2">3</button></div>
 <div id="bar"><button id="all">Hepsi</button><button id="none">İptal</button><button id="base">Üs</button></div>
 <button id="mute">🔊</button>
+<div id="menu"><span>Zorluk</span><div class="row"><button data-diff="kolay">Kolay</button><button data-diff="normal">Normal</button><button data-diff="zor">Zor</button></div><button id="play" class="big">Başla</button></div>
 <div id="msg" hidden><span></span><button id="restart">Yeniden başla</button></div>
 <script type="module" src="src/main.js"></script>
 </body>

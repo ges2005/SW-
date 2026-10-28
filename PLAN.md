@@ -46,8 +46,15 @@ Mantık ayrı olduğu için çizim/girdi değişse (başka kamera, yeni ekran) m
   - **Çift dokunma:** bir birime iki kez dokununca ekrandaki aynı türden tüm birimler seçilir.
   - Masaüstü bonusu (isteğe bağlı): 1-3 seç, Ctrl+1-3 kaydet, S dur, A kip değiştir. Oyun yalnızca sol tıkla da tam oynanır.
 
+- **Aşama 4 — Yapay zeka (`src/ai.js`):**
+  - Açılışta zorluk menüsü (Kolay / Normal / Zor, seçim hatırlanır).
+  - Yapay zeka **sisle sınırlı**: nokta konumlarını bilir ama sahibini ancak gördüğünde öğrenir, düşmanı yalnızca kendi görüşündeki kadar bilir.
+  - Davranışlar: görülen düşmana karşı tür seçimi, savunma (yeterince güçlüyse tehdit eden düşmana gider), yakın tarafsız noktalara küçük ekiplerle genişleme, görülmemiş noktaya keşif birimi, birim toplanınca saldırı dalgası, ele geçirme sürerken birimleri başka işe çekmeme.
+  - Zorluklar: Kolay yavaş düşünür, bazen hiçbir şey yapmaz (`lazy`), hedefi sık sık rastgele seçer (`sloppy`), savunma/keşif/karşı tür yok. Normal tam davranış seti. Zor daha sık düşünür (1 sn) ve daha küçük dalgalarla (4) erken baskı yapar. Hile (gizli bonus) yok.
+  - **Ölçüm** (`node test/ai-balance.js zor,normal,zor,normal 8 600`, köşegen ikili düzen, 64 oyun): ortalama nokta zor 6.3 / normal 2.9; normal 6.0 / kolay 3.2; zor 5.5 / kolay 3.5. Sıralama zor > normal > kolay.
+  - **Öğrenilenler:** (1) Zırhsız "geri çekilme" (Yürü kipiyle kaçış) birimleri arkadan öldürttüğü için yapay zekayı zayıflattı, kaldırıldı. (2) Ele geçirme 2.5 sn sürdüğü için birimleri hemen başka işe çekmek ağır bedel; (3) denge ölçümünde zorlukları köşegen ikili düzenle karşılaştırmak şart, yoksa zayıf komşusu olan taraf yanlış yüksek görünür.
+
 ## Sıradaki aşamalar
-4. **Yapay zeka:** zorluk seviyeleri, savunma, geri çekilme, birimleri toplama.
 5. **İçerik:** rastgele harita, bölümler/modlar, öğretici.
 6. **Paketleme:** PWA, sonra Capacitor ile mobil uygulama.
 7. **Dengeleme:** kartopu etkisini sınırlayan geri dönüş mekanikleri; tür ve nokta değerlerinin oyun testiyle ayarı.

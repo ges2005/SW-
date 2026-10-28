@@ -1,6 +1,6 @@
 import { CFG } from './config.js';
 import { createGame, step, commandStop, ownedCount, unitCount, capacity, spawnInterval, buff } from './sim.js';
-import { createAI, stepAI } from './ai.js';
+import { createAI, stepAI, DIFFICULTY } from './ai.js';
 import { render, toScreen, toWorld, clampCam } from './iso.js';
 import { bindInput } from './input.js';
 import { createFx } from './fx.js';
@@ -12,7 +12,19 @@ const ctx = canvas.getContext('2d');
 const hud = document.getElementById('hud');
 const msg = document.getElementById('msg');
 let game = createGame();
-let ais = [1, 2, 3].map(createAI);
+let diff = 'normal';
+try { const d = localStorage.getItem('sw-diff'); if (d in DIFFICULTY) diff = d; } catch { /* kayıt yoksa varsayılan */ }
+let ais = [], started = false;
+const menu = document.getElementById('menu');
+const diffBtns = [...document.querySelectorAll('[data-diff]')];
+const showDiff = () => diffBtns.forEach(b => b.classList.toggle('on', b.dataset.diff === diff));
+function startGame() {
+  game = createGame(); ui.vision = createVision(); ui.selected.clear(); ui.groups = [[], [], []];
+  ais = [1, 2, 3].map(t => createAI(t, diff)); started = true; menu.hidden = true; msg.hidden = true; focusBase();
+}
+diffBtns.forEach(b => b.onclick = () => { diff = b.dataset.diff; try { localStorage.setItem('sw-diff', diff); } catch { /* sessiz */ } showDiff(); });
+document.getElementById('play').onclick = () => { unlockAudio(); startGame(); };
+showDiff();
 const cam = { x: 0, y: 0, zoom: 1, w: 0, h: 0 };
 const fx = createFx();
 const vision = createVision();
@@ -76,13 +88,13 @@ window.addEventListener('keydown', e => {
 const prodBtns = [...document.querySelectorAll('[data-prod]')];
 const showProd = () => prodBtns.forEach(b => b.classList.toggle('on', game.teams[0].prod === b.dataset.prod));
 prodBtns.forEach(b => b.onclick = () => { game.teams[0].prod = b.dataset.prod; showProd(); clickSound(); });
-document.getElementById('restart').onclick = () => { game = createGame(); ui.vision = createVision(); ais = [1, 2, 3].map(createAI); ui.selected.clear(); ui.groups = [[], [], []]; msg.hidden = true; focusBase(); };
+document.getElementById('restart').onclick = () => { started = false; msg.hidden = true; menu.hidden = false; };
 
 let last = performance.now(), acc = 0;
 const DT = 1 / 20;
 function frame(now) {
-  acc += Math.min(0.25, (now - last) / 1000); last = now;
-  while (acc >= DT) { ais.forEach(a => stepAI(game, a, DT)); step(game, DT); fx.update(DT); ui.time += DT; acc -= DT; }
+  acc = started ? acc + Math.min(0.25, (now - last) / 1000) : 0; last = now;
+  while (started && acc >= DT) { ais.forEach(a => stepAI(game, a, DT)); step(game, DT); fx.update(DT); ui.time += DT; acc -= DT; }
   updateVision(ui.vision, game, 0);
   // sis altındaki olayların efekti ve sesi oyuncuya sızmaz
   for (const e of game.events) if (e.team === 0 || isVisible(ui.vision, e.x, e.y)) { fx.add(e); playEvent(e, 0); }
@@ -91,7 +103,7 @@ function frame(now) {
   render(ctx, cam, game, ui);
   const t = 0; showProd(); showGroups();
   hud.textContent = `Nokta ${ownedCount(game, t)} · Birim ${unitCount(game, t)}/${capacity(game, t)} · Üretim ${(spawnInterval(game, t) * CFG.types[game.teams[0].prod].cost).toFixed(1)}sn · Güç x${buff(game, t).toFixed(2)} · Seçili ${ui.selected.size}`;
-  if (game.winner !== -1) { msg.hidden = false; msg.firstChild.textContent = game.winner === 0 ? 'Kazandın!' : 'Kaybettin'; }
+  if (started && game.winner !== -1) { msg.hidden = false; msg.firstChild.textContent = game.winner === 0 ? 'Kazandın!' : 'Kaybettin'; }
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
