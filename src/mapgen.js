@@ -68,5 +68,5 @@ export function buildPoints(seed = 0, seats = [0, 1, 2, 3]) {
     b = rot(b); l = l.map(rot);
   }
   if (sec.center) pts.push({ x: C, y: C, owner: -1, kind: sec.center });
-  return pts.map((p, i) => ({ id: i, prog: 0, capTeam: -1, cd: 0, suit: i % 2 ? 'S' : 'H', ...p }));
+  return pts.map((p, i) => ({ id: i, prog: 0, capTeam: -1, cd: 0, ...p }));
 }
