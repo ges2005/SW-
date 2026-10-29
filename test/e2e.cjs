@@ -27,7 +27,7 @@ const ok = (c, m) => { if (!c) throw new Error('BAŞARISIZ: ' + m); console.log(
   const tileXY = (i, j) => p.evaluate(([i, j]) => { const { ui, cam } = window.__game(); const s = ui.project(i, j); const r = document.getElementById('c').getBoundingClientRect(); return { x: s.x * r.width / cam.w, y: s.y * r.height / cam.h }; }, [i, j]);
   const swipe = async (from, to, steps = 6) => { await touch('touchStart', [from]); for (let k = 1; k <= steps; k++) await touch('touchMove', [{ x: from.x + (to.x - from.x) * k / steps, y: from.y + (to.y - from.y) * k / steps }]); await touch('touchEnd', []); await wait(600); };
   // birimleri sabitle ve üssün önüne diz (testler hareketten etkilenmesin)
-  const freeze = () => p.evaluate(() => { const { game, cam, ui } = window.__game(); cam.zoom = 0.7; ui.selected.clear(); game.units.forEach(u => { u.tx = u.ty = null; u.hold = true; u.mode = 'attack'; }); const b = game.points.find(x => x.base && x.team === 0); game.units.filter(u => u.team === 0).forEach((u, k) => { u.x = b.x + (k - 1) * 1.6; u.y = b.y + 1.5; }); });
+  const freeze = () => p.evaluate(() => { const { game, cam, ui } = window.__game(); game.teams.forEach(t => { t.spawnT = -1e9; }); cam.zoom = 0.7; ui.selected.clear(); game.units.forEach(u => { u.tx = u.ty = null; u.hold = true; u.mode = 'attack'; }); const b = game.points.find(x => x.base && x.team === 0); game.units.filter(u => u.team === 0).forEach((u, k) => { u.x = b.x + (k - 1) * 1.6; u.y = b.y + 1.5; }); });
 
   await p.goto(url); await wait(400);
   ok(await p.isVisible('#menu'), 'menü açılışta görünüyor');
@@ -196,7 +196,10 @@ const ok = (c, m) => { if (!c) throw new Error('BAŞARISIZ: ' + m); console.log(
 
   // nokta renkleri: tarafsız silik gri, ele geçirilince takımın rengi (çizilen piksellerden ölçülür)
   await freeze(); await wait(100);
-  const px = () => p.evaluate(() => { const { game, ui, cam } = window.__game(); const dpr = window.devicePixelRatio || 1; const pt = game.points.find(q => !q.base && q.kind === 'eko' && Math.hypot(q.x - game.points.find(b => b.base && b.team === 0).x, q.y - game.points.find(b => b.base && b.team === 0).y) < 6); const s = ui.project(pt.x, pt.y); const d = document.getElementById('c').getContext('2d').getImageData(Math.round((s.x + 16) * dpr), Math.round(s.y * dpr), 1, 1).data; return { id: pt.id, rgb: [d[0], d[1], d[2]], owner: pt.owner }; });
+  // sahneyi kur: üsse en yakın tarafsız ekonomi noktasını seç, birimleri ondan 3 kare uzağa (görüş içinde, ele geçirmeden uzak) koy
+  const pid = await p.evaluate(() => { const { game, cam } = window.__game(); const b0 = game.points.find(x => x.base && x.team === 0); const q = game.points.filter(x => !x.base && x.kind === 'eko' && x.owner === -1).sort((m, n) => Math.hypot(m.x - b0.x, m.y - b0.y) - Math.hypot(n.x - b0.x, n.y - b0.y))[0]; game.teams.forEach(t => { t.spawnT = -1e9; }); game.units.filter(u => u.team === 0).forEach((u, k) => { u.tx = u.ty = null; u.hold = true; u.x = Math.min(23, q.x + 3 + k * 0.4); u.y = q.y; }); q.prog = 0; q.capTeam = -1; cam.zoom = 0.7; cam.x = (q.x - q.y) * 32; cam.y = (q.x + q.y) * 16; return q.id; });
+  await wait(150);
+  const px = () => p.evaluate(id => { const { game, ui } = window.__game(); const pt = game.points[id]; const s = ui.project(pt.x, pt.y); const dpr = window.devicePixelRatio || 1; const d = document.getElementById('c').getContext('2d').getImageData(Math.round((s.x + 16) * dpr), Math.round(s.y * dpr), 1, 1).data; return { id, rgb: [d[0], d[1], d[2]], owner: pt.owner }; }, pid);
   const neutral = await px();
   await p.evaluate(id => { window.__game().game.points[id].owner = 0; }, neutral.id); await wait(300);
   const owned = await px();

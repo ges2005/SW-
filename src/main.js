@@ -93,8 +93,11 @@ function buildLevels() {
   LEVELS.forEach((lv, i) => {
     const open = isUnlocked(progress, i), done = progress.done.includes(lv.id);
     const b = document.createElement('button');
-    b.className = 'level'; b.disabled = !open;
-    b.innerHTML = `<b>${open ? (done ? '✓' : '▶') : '🔒'} ${i === 0 ? '' : i + '. '}${lv.ad}</b><small>${lv.ipucu}</small>`;
+    b.className = 'level' + (done ? ' done' : ''); b.disabled = !open; b.style.setProperty('--i', i);
+    const rakip = lv.enemies.length, d = DIFFICULTY[lv.diff];
+    b.innerHTML = `<span class="num">${done ? '✓' : open ? (i === 0 ? '★' : i) : '🔒'}</span>
+      <span class="txt"><b>${lv.ad}</b><small>${lv.ipucu}</small></span>
+      <span class="meta"><em class="pill d-${lv.diff}">${d.label}</em><em class="pill">${rakip} rakip</em></span>`;
     b.onclick = () => { unlockAudio(); startGame({ ...lv, levelId: lv.id, idx: i }); };
     levelsEl.appendChild(b);
   });
@@ -121,6 +124,8 @@ function startGame(cfg) {
 function showEnd(won) {
   msg.hidden = false; ended = true;
   msg.firstChild.textContent = won ? 'Kazandın!' : 'Kaybettin';
+  msg.classList.toggle('win', won); msg.classList.toggle('lose', !won);
+  $('retry').classList.toggle('primary', !won);
   if (won && current.levelId && !progress.done.includes(current.levelId)) { progress.done.push(current.levelId); saveProgress(progress); }
   const nextLv = won && current.idx != null ? LEVELS[current.idx + 1] : null;
   $('next').hidden = !nextLv;
