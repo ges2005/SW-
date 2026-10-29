@@ -194,15 +194,19 @@ const ok = (c, m) => { if (!c) throw new Error('BAŞARISIZ: ' + m); console.log(
   const bxy3 = await tileXY(base.i + 0.4, base.j - 0.9);
   await p.touchscreen.tap(bxy3.x, bxy3.y); await wait(450);   // seçim yokken üsse dokun = hepsini seç
   { const t = await st(); ok(t.sel === t.units && t.sel >= 2, `üsse dokununca hepsi seçildi (${t.sel}/${t.units}, çekilme senaryosu)`); }
+  // çekilme uzun sürsün (yavaş CI'da da bayrakları yakalayabilelim): birimleri üsten 5 kare uzağa al
+  await p.evaluate(() => { const { game } = window.__game(); const b5 = game.points.find(x => x.base && x.team === 0); game.units.filter(u => u.team === 0).forEach((u, k) => { u.x = b5.x + (k - 1) * 0.8; u.y = b5.y + 5; }); });
   await p.tap('#retreat'); await wait(150);
   const rt = await p.evaluate(() => { const { game, ui } = window.__game(); const us = game.units.filter(u => u.team === 0); return { sel: ui.selected.size, all: us.every(u => u.retreat && u.mode === 'move' && u.tx !== null), toast: !document.getElementById('toast').hidden }; });
   ok(rt.sel === 0 && rt.all && rt.toast, '↩ Çekil düğmesi: birimler savaşmadan çekiliyor, seçim bırakılıyor, mesaj çıkıyor');
-  await wait(2500);
-  ok(await p.evaluate(() => window.__game().game.units.filter(u => u.team === 0).every(u => !u.retreat && u.hold && u.tx === null)), 'çekilen birimler varınca mevzi tutuyor');
+  await p.waitForFunction(() => window.__game().game.units.filter(u => u.team === 0).every(u => !u.retreat && u.hold && u.tx === null), null, { timeout: 15000 });
+  ok(true, 'çekilen birimler varınca mevzi tutuyor');
   await freeze(); await wait(150);
+  await p.evaluate(() => { const { game } = window.__game(); const b6 = game.points.find(x => x.base && x.team === 0); game.units.filter(u => u.team === 0).forEach((u, k) => { u.x = b6.x + (k - 1) * 0.8; u.y = b6.y + 5; }); });
+  await wait(100);
   const au = await unitXY(0);
   await p.touchscreen.tap(au.x, au.y); await wait(450);
-  await p.touchscreen.tap(bxy3.x, bxy3.y); await wait(300);
+  await p.touchscreen.tap(bxy3.x, bxy3.y); await wait(150);
   const rt2 = await p.evaluate(() => { const { game, ui } = window.__game(); const u = game.units.filter(x => x.team === 0)[0]; return { sel: ui.selected.size, retreat: u.retreat, mode: u.mode }; });
   ok(rt2.sel === 0 && rt2.retreat && rt2.mode === 'move', 'seçiliyken üsse dokunmak da geri çekilmeyi başlatıyor');
 
