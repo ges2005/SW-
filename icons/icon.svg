@@ -1,10 +1,60 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1f7ae0"/><stop offset="1" stop-color="#06264d"/></linearGradient></defs>
-  <rect width="512" height="512" fill="url(#g)"/>
-  <polygon points="256,110 436,200 256,290 76,200" fill="#eceeef"/>
-  <polygon points="256,290 436,200 436,226 256,316" fill="#c9ced3"/>
-  <polygon points="256,290 76,200 76,226 256,316" fill="#aab1b8"/>
-  <polygon points="256,160 316,190 256,220 196,190" fill="#b400b4"/>
-  <rect x="236" y="262" width="40" height="92" rx="14" fill="#b400b4" stroke="#fff" stroke-width="8"/>
-  <circle cx="256" cy="238" r="26" fill="#e8c4a0" stroke="#fff" stroke-width="8"/>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a82ea"/><stop offset="1" stop-color="#06264d"/></linearGradient>
+    <radialGradient id="glow" cx="50%" cy="48%" r="50%"><stop offset="0" stop-color="#8fd0ff" stop-opacity=".55"/><stop offset="1" stop-color="#8fd0ff" stop-opacity="0"/></radialGradient>
+    <linearGradient id="blade" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#ffffff"/><stop offset=".45" stop-color="#cfd8e0"/><stop offset="1" stop-color="#8e99a5"/></linearGradient>
+    <linearGradient id="fur" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffc062"/><stop offset="1" stop-color="#f59a2e"/></linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <!-- arka plan: izometrik karo ve ışıma -->
+  <polygon points="256,330 470,432 256,534 42,432" fill="#eceeef" opacity=".22"/>
+  <circle cx="256" cy="250" r="230" fill="url(#glow)"/>
+
+  <!-- gövde -->
+  <ellipse cx="256" cy="452" rx="112" ry="72" fill="url(#fur)"/>
+  <ellipse cx="256" cy="458" rx="52" ry="52" fill="#fff3e0"/>
+  <!-- sol pati -->
+  <ellipse cx="168" cy="424" rx="34" ry="26" fill="url(#fur)" stroke="#d9801d" stroke-width="3"/>
+  <path d="M154 424 q6 -8 12 0 M168 424 q6 -8 12 0" stroke="#d9801d" stroke-width="3" fill="none" stroke-linecap="round"/>
+
+  <!-- bıçak (sağ elde, hafif eğik) -->
+  <g transform="rotate(14 392 392)">
+    <rect x="379" y="350" width="26" height="64" rx="9" fill="#6b3f1d"/>
+    <rect x="379" y="366" width="26" height="6" fill="#4a2a10"/><rect x="379" y="384" width="26" height="6" fill="#4a2a10"/>
+    <rect x="366" y="340" width="52" height="14" rx="6" fill="#d9b13a" stroke="#a8841f" stroke-width="3"/>
+    <path d="M370 340 L370 238 L392 192 L414 238 L414 340 Z" fill="url(#blade)" stroke="#7d8892" stroke-width="4" stroke-linejoin="round"/>
+    <path d="M384 330 L384 246" stroke="#fff" stroke-width="6" stroke-linecap="round" opacity=".85"/>
+    <path d="M404 190 l5 -14 l5 14 l14 5 l-14 5 l-5 14 l-5 -14 l-14 -5 z" fill="#fff" opacity=".95" transform="translate(-2 -6) scale(.9)"/>
+  </g>
+  <!-- bıçağı tutan pati -->
+  <ellipse cx="398" cy="408" rx="34" ry="28" fill="url(#fur)" stroke="#d9801d" stroke-width="3"/>
+  <path d="M382 404 q7 -10 14 0 M396 404 q7 -10 14 0 M410 406 q6 -8 11 0" stroke="#d9801d" stroke-width="3" fill="none" stroke-linecap="round"/>
+
+  <!-- kulaklar -->
+  <g stroke="#f59a2e" stroke-width="16" stroke-linejoin="round" fill="#f59a2e">
+    <polygon points="116,212 128,92 216,150"/><polygon points="396,212 384,92 296,150"/>
+  </g>
+  <polygon points="138,184 144,122 190,152" fill="#ffa9b8"/><polygon points="374,184 368,122 322,152" fill="#ffa9b8"/>
+
+  <!-- kafa -->
+  <ellipse cx="256" cy="262" rx="152" ry="128" fill="url(#fur)"/>
+  <!-- alın çizgileri -->
+  <g stroke="#d9801d" stroke-width="10" stroke-linecap="round" fill="none"><path d="M256 146 v32"/><path d="M226 152 l7 26"/><path d="M286 152 l-7 26"/></g>
+  <!-- yanak tüyü -->
+  <g stroke="#d9801d" stroke-width="7" stroke-linecap="round" fill="none"><path d="M112 262 l22 6"/><path d="M114 284 l22 0"/><path d="M400 262 l-22 6"/><path d="M398 284 l-22 0"/></g>
+  <!-- allık -->
+  <ellipse cx="152" cy="318" rx="24" ry="15" fill="#ff7a93" opacity=".5"/><ellipse cx="360" cy="318" rx="24" ry="15" fill="#ff7a93" opacity=".5"/>
+
+  <!-- gözler: iri, yuvarlak, parıl parıl; bize bakıyor -->
+  <ellipse cx="192" cy="262" rx="40" ry="46" fill="#1b1020"/><ellipse cx="320" cy="262" rx="40" ry="46" fill="#1b1020"/>
+  <circle cx="206" cy="244" r="15" fill="#fff"/><circle cx="334" cy="244" r="15" fill="#fff"/>
+  <circle cx="182" cy="280" r="8" fill="#fff"/><circle cx="310" cy="280" r="8" fill="#fff"/>
+  <circle cx="214" cy="270" r="4" fill="#fff" opacity=".8"/><circle cx="342" cy="270" r="4" fill="#fff" opacity=".8"/>
+
+  <!-- burun-ağız -->
+  <ellipse cx="256" cy="328" rx="54" ry="38" fill="#fff3e0"/>
+  <path d="M243 308 h26 l-13 15 z" fill="#ff7a93" stroke="#e45a78" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M256 322 v10 M256 332 q-14 15 -28 3 M256 332 q14 15 28 3" stroke="#8a4a3a" stroke-width="5" fill="none" stroke-linecap="round"/>
+  <!-- bıyıklar -->
+  <g stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".95"><path d="M206 326 L120 310"/><path d="M206 340 L124 352"/><path d="M306 326 L392 310"/><path d="M306 340 L388 352"/></g>
 </svg>
