@@ -134,6 +134,8 @@ Kullanıcı isteği: 3 arkadaşla (toplam 4 kişi), **farklı ağlardan**, linkl
 
 - **Oyun adı: TONTON GAMES** (sayfa başlığı, giriş ekranı, PWA adı/kısa adı, iOS ana ekran etiketi, Android uygulama adı). İç kimlikler bilerek değişmedi (Android paket kimliği `io.github.ges2005.strateji`, önbellek öneki, APK artifact adı): değişirse kurulu uygulamalar güncelleme olarak tanınmaz. **Not:** iPhone ana ekran etiketi simge eklenirken okunur; eski simge eski adı gösterir, yeni ad için silip yeniden eklemek gerekir.
 
+- **Logo (kullanıcı isteği):** TONTON GAMES amblemi: elinde bıçak tutan, bize bakan tatlı bir yavru kedi (turuncu, iri parlak gözler, kaşsız; çizgi film tarzı, kansız). Kaynak `icons/icon.svg`; PNG'ler (192/512/maskable/apple-touch) ve Android başlatıcı simgeleri ile açılış ekranları bundan üretiliyor. iPhone'da ana ekran simgesi eklenirken okunur: yeni logoyu görmek için simgeyi silip yeniden eklemek gerekir.
+
 ## Doğrulanmadı / açık işler
 - Gerçek telefonda dokunma hissi, performans (çok birimli savaşlar), ses.
 - Android APK derlemesi ve cihaza kurulumu; Pages yayını.
