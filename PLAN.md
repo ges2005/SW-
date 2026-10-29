@@ -32,7 +32,7 @@ Mantık ayrı olduğu için çizim/girdi değişse (başka kamera, yeni ekran) m
 - **Aşama 1 — Hissiyat:** yürüme sekmesi, vuruş atılması, kıvılcım, ölüm efekti, ele geçirme dalgası, üretim halkası, WebAudio sesleri (mobilde ilk dokunuşta açılır, ses düğmesi var). Efektler `src/fx.js`, sesler `src/audio.js`; mantık yalnızca olay (`events`) üretir.
 - **Aşama 2 (kısmen) — Derinlik:**
   - Birim türleri: Piyon > Okçu > Zırhlı > Piyon (üstünlük x1.5, dezavantaj x0.75). Okçu menzilli (3.2), zırhlı yavaş ve dayanıklı, her tür farklı üretim maliyetinde. Üretilecek tür sol alttaki ⚔️ 🏹 🛡️ butonlarıyla seçilir.
-  - Nokta türleri: ♥/♠ ekonomi, ♦ demirci (buff için 2 nokta sayılır), ♣ kule (yakın düşmana ateş eder).
+  - Nokta türleri: ekonomi (köy), demirci (buff için 2 nokta sayılır), kule (yakın düşmana ateş eder). Amblemler işlevine göre: köy 🏠, örs, nişangâh, ana üs için kale.
   - Yapay zeka, en kalabalık düşman türünü yenen türü üretir.
   - Test: türlerin 1'e 1 düello sonuçları ve kule hasarı `npm test` içinde.
 
@@ -123,7 +123,7 @@ Kullanıcı isteği: 3 arkadaşla (toplam 4 kişi), **farklı ağlardan**, linkl
   - Efektler (yayılan dolgulu elips, ✚ parçacıkları, düşen oklar, hız çizgileri) ve sesler eklendi. Sim olayı: `skill`.
 - **Giriş ekranı yenilendi:** logo ve degrade başlık, hareketli izometrik desenli arka plan, cam efektli seviye kartları (numara/✓/🔒 rozeti, zorluk ve rakip sayısı etiketi), seçim çipleri (emojili), parlayan BAŞLA düğmesi, bitiş ekranında 🏆/💥. `prefers-reduced-motion` desteklenir.
 
-- **Amblem okunurluğu (iPhone geri bildirimi):** noktalardaki ♥ ♠ ♦ ♣ metin karakterleri iPhone'da emoji gibi çizilip rengini kaybedebildiği için mor zeminde zor görünüyordu. Artık vektör şekil olarak çiziliyor (`suitPath`/`drawSuit`, `src/iso.js`): ele geçirilmiş noktada **beyaz + koyu ince kenarlık**, tarafsızda silik gri. Kule amblemi kule gövdesinin üstünde. Piksel ölçümüyle test edildi.
+- **Amblem okunurluğu ve anlamı (iPhone geri bildirimi):** noktalardaki ♥ ♠ ♦ ♣ iskambil karakterleri oyunla ilgisizdi ve (metin karakteri oldukları için) iPhone'da iPhone'da emoji gibi çizilip rengini kaybedebildiği için mor zeminde zor görünüyordu. Artık işlevine uygun vektör amblemler çiziliyor (`emblemPath`/`drawEmblem`, `src/iso.js`): **köy** (ekonomi), **örs** (demirci), **nişangâh** (kule), **kale** (ana üs): ele geçirilmiş noktada **beyaz + koyu ince kenarlık**, tarafsızda silik gri. Kule amblemi kule gövdesinin üstünde. Piksel ölçümüyle test edildi.
 
 ## Doğrulanmadı / açık işler
 - Gerçek telefonda dokunma hissi, performans (çok birimli savaşlar), ses.

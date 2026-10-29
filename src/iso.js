@@ -37,29 +37,42 @@ const poly = (ctx, pts, fill, stroke) => {
   if (stroke) { ctx.strokeStyle = stroke; ctx.stroke(); }
 };
 const diamond = (cam, i, j, r) => [[i - r, j - r], [i + r, j - r], [i + r, j + r], [i - r, j + r]].map(([a, b]) => toScreen(cam, a, b));
-// Sembolleri metin karakteri yerine yol olarak çizeriz: bazı cihazlar (özellikle iPhone) ♥ ♦ gibi karakterleri
-// renkli emoji gibi çizip fillStyle'ı yok sayar; vektör şekil her yerde aynı ve istenen renkte görünür.
-function suitPath(ctx, kind, u) {
+// Nokta amblemleri işlevine göre; metin karakteri değil vektör yol olarak çizilir (bazı cihazlar, özellikle iPhone,
+// ♥ gibi karakterleri renkli emoji gibi çizip fillStyle'ı yok sayar; yol her yerde aynı ve istenen renkte görünür).
+//   koy   = ekonomi noktası (üretim hızı, kapasite, güç)     orsu = demirci (ek güç)
+//   hedef = kule (yakın düşmana ateş eder)                    kale = ana üs
+// Delikler (kapı gibi) ters yönlü alt yol olarak çizilir.
+function rectPath(ctx, x0, y0, x1, y1, hole) {
+  if (hole) { ctx.moveTo(x0, y0); ctx.lineTo(x0, y1); ctx.lineTo(x1, y1); ctx.lineTo(x1, y0); }
+  else { ctx.moveTo(x0, y0); ctx.lineTo(x1, y0); ctx.lineTo(x1, y1); ctx.lineTo(x0, y1); }
+  ctx.closePath();
+}
+function emblemPath(ctx, name, u) {
   ctx.beginPath();
-  if (kind === 'H') { // kalp
-    ctx.moveTo(0, u * 0.95); ctx.bezierCurveTo(-u * 1.5, u * 0.05, -u * 1.15, -u * 1.0, 0, -u * 0.35);
-    ctx.bezierCurveTo(u * 1.15, -u * 1.0, u * 1.5, u * 0.05, 0, u * 0.95);
-  } else if (kind === 'S') { // maça
-    ctx.moveTo(0, -u * 1.0); ctx.bezierCurveTo(-u * 1.5, -u * 0.05, -u * 1.15, u * 0.95, 0, u * 0.35);
-    ctx.bezierCurveTo(u * 1.15, u * 0.95, u * 1.5, -u * 0.05, 0, -u * 1.0);
-    ctx.moveTo(0, u * 0.1); ctx.lineTo(-u * 0.5, u * 1.05); ctx.lineTo(u * 0.5, u * 1.05); ctx.closePath();
-  } else if (kind === 'D') { // karo
-    ctx.moveTo(0, -u * 1.1); ctx.lineTo(u * 0.85, 0); ctx.lineTo(0, u * 1.1); ctx.lineTo(-u * 0.85, 0); ctx.closePath();
-  } else { // sinek
-    ctx.arc(0, -u * 0.5, u * 0.52, 0, 7); ctx.moveTo(-u * 0.05, u * 0.2); ctx.arc(-u * 0.62, u * 0.2, u * 0.52, 0, 7);
-    ctx.moveTo(u * 1.2, u * 0.2); ctx.arc(u * 0.62, u * 0.2, u * 0.52, 0, 7);
-    ctx.moveTo(0, u * 0.1); ctx.lineTo(-u * 0.42, u * 1.05); ctx.lineTo(u * 0.42, u * 1.05); ctx.closePath();
+  if (name === 'koy') { // ev: çatı + gövde + kapı deliği
+    ctx.moveTo(-1.25 * u, -0.05 * u); ctx.lineTo(0, -1.15 * u); ctx.lineTo(1.25 * u, -0.05 * u); ctx.closePath();
+    rectPath(ctx, -0.85 * u, -0.05 * u, 0.85 * u, 1.0 * u, false);
+    rectPath(ctx, -0.26 * u, 0.4 * u, 0.26 * u, 1.0 * u, true);
+  } else if (name === 'orsu') { // örs: yüz + boynuz + gövde + taban
+    ctx.moveTo(-1.0 * u, -0.85 * u); ctx.lineTo(1.1 * u, -0.85 * u); ctx.lineTo(1.1 * u, -0.25 * u); ctx.lineTo(-1.0 * u, -0.25 * u); ctx.closePath();
+    ctx.moveTo(-1.0 * u, -0.85 * u); ctx.lineTo(-1.55 * u, -0.3 * u); ctx.lineTo(-1.0 * u, -0.25 * u); ctx.closePath();
+    ctx.moveTo(-0.45 * u, -0.25 * u); ctx.lineTo(0.55 * u, -0.25 * u); ctx.lineTo(0.8 * u, 0.55 * u); ctx.lineTo(-0.7 * u, 0.55 * u); ctx.closePath();
+    rectPath(ctx, -1.05 * u, 0.55 * u, 1.15 * u, 1.0 * u, false);
+  } else if (name === 'hedef') { // nişangâh: halka + artı
+    ctx.arc(0, 0, 0.95 * u, 0, Math.PI * 2); ctx.moveTo(0.58 * u, 0); ctx.arc(0, 0, 0.58 * u, 0, Math.PI * 2, true);
+    rectPath(ctx, -0.13 * u, -1.35 * u, 0.13 * u, 1.35 * u, false); rectPath(ctx, -1.35 * u, -0.13 * u, 1.35 * u, 0.13 * u, false);
+  } else { // kale: başlıklı iki kule + siperlikli duvar + kapı deliği
+    rectPath(ctx, -1.1 * u, -0.6 * u, -0.5 * u, 1.0 * u, false); rectPath(ctx, 0.5 * u, -0.6 * u, 1.1 * u, 1.0 * u, false);
+    rectPath(ctx, -1.3 * u, -1.0 * u, -0.3 * u, -0.6 * u, false); rectPath(ctx, 0.3 * u, -1.0 * u, 1.3 * u, -0.6 * u, false);
+    rectPath(ctx, -0.5 * u, -0.1 * u, 0.5 * u, 1.0 * u, false);
+    rectPath(ctx, -0.38 * u, -0.38 * u, -0.1 * u, -0.1 * u, false); rectPath(ctx, 0.1 * u, -0.38 * u, 0.38 * u, -0.1 * u, false);
+    rectPath(ctx, -0.27 * u, 0.35 * u, 0.27 * u, 1.0 * u, true);
   }
 }
-function drawSuit(ctx, kind, x, y, u, fill, stroke) {
-  ctx.save(); ctx.translate(x, y); suitPath(ctx, kind, u);
-  ctx.fillStyle = fill; ctx.fill();
-  if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = Math.max(1.5, u * 0.14); ctx.lineJoin = 'round'; ctx.stroke(); }
+function drawEmblem(ctx, name, x, y, u, fill, stroke) {
+  ctx.save(); ctx.translate(x, y); emblemPath(ctx, name, u);
+  ctx.fillStyle = fill; ctx.fill('nonzero');
+  if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = Math.max(1.5, u * 0.13); ctx.lineJoin = 'round'; ctx.stroke(); }
   ctx.restore();
 }
 const mixHex = (a, b, t) => {
@@ -100,10 +113,11 @@ export function render(ctx, cam, g, ui) {
       ctx.beginPath(); ctx.roundRect(s.x - 8 * z, s.y - 40 * z, 16 * z, 38 * z, 3 * z); ctx.fill(); ctx.stroke();
       ctx.fillRect(s.x - 11 * z, s.y - 46 * z, 22 * z, 7 * z);
     }
-    if (!p.base) { // amblem: ele geçirilmiş noktada açık (beyaz) ve koyu kenarlıklı, tarafsızda silik
+    { // amblem: işlevine göre; ele geçirilmişse açık (beyaz) ve koyu kenarlıklı, tarafsızda silik
       const coloured = own >= 0 || (capturing && p.prog > 0.5);
-      const kind = p.kind === 'demirci' ? 'D' : p.kind === 'kule' ? 'C' : (p.suit === 'S' ? 'S' : 'H');
-      drawSuit(ctx, kind, s.x, s.y + (p.kind === 'kule' ? 4 * z : 0), 11 * z, coloured ? '#ffffff' : '#aab1b6', coloured ? 'rgba(15,10,40,.55)' : null);
+      const name = p.base ? 'kale' : p.kind === 'demirci' ? 'orsu' : p.kind === 'kule' ? 'hedef' : 'koy';
+      const u = (p.base ? 13 : 11) * z, dy = p.kind === 'kule' ? 4 * z : 0;
+      drawEmblem(ctx, name, s.x, s.y + dy, u, coloured ? '#ffffff' : '#aab1b6', coloured ? 'rgba(15,10,40,.55)' : null);
     }
   }
 
