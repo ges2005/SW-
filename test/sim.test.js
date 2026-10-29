@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { createGame, step, commandMove, commandStop, castSkill, ownedCount, capacity, spawnUnit } from '../src/sim.js';
+import { createGame, step, commandMove, commandStop, commandRetreat, spawnProgress, castSkill, ownedCount, capacity, spawnUnit } from '../src/sim.js';
 import { createAI, stepAI, DIFFICULTY } from '../src/ai.js';
 import { createVision, updateVision, isVisible, isSeen } from '../src/vision.js';
 
@@ -181,3 +181,43 @@ console.log('yetenek testleri tamam');
   assert.ok(normal > 0 && zor > 0, `normal (${normal}) ve zor (${zor}) yetenek kullanır`);
   console.log('yapay zeka yetenek kullanımı (6 oyun, 5 dk): kolay', kolay, 'normal', normal, 'zor', zor);
 }
+
+// Geri çekil: savaştaki birim savaşı bırakıp en yakın kendi noktasına koşar ve mevzi tutar
+{
+  const arena = () => { const d = createGame(); d.units = []; d.teams.forEach(t => { t.spawnT = -1e9; }); return d; };
+  // karşılaştırma: saldır-hareket emri alan savaştaki birim yerinde dövüşmeye devam eder
+  {
+    const g = arena(); const a = spawnUnit(g, 0, 'piyon', 12, 12), e = spawnUnit(g, 1, 'zirh', 12.8, 12); e.hp = e.maxHp = 400;
+    commandMove(g, [a.id], 20, 3, 'attack');
+    for (let i = 0; i < 20 * 2; i++) step(g, 0.05);
+    assert.ok(e.hp < 400, 'saldır-hareket emri alsa da savaştaki birim dövüşmeye devam eder (bilinçli)');
+  }
+  const g = arena(); const a = spawnUnit(g, 0, 'piyon', 12, 12), e = spawnUnit(g, 1, 'zirh', 12.8, 12); e.hp = e.maxHp = 400;
+  const base = g.points.find(p => p.base && p.team === 0);
+  assert.equal(commandRetreat(g, [a.id]), true);
+  const d0 = Math.hypot(a.x - e.x, a.y - e.y);
+  for (let i = 0; i < 20 * 3; i++) step(g, 0.05);
+  assert.equal(e.hp, 400, 'çekilen birim savaşmaz (rakibe hasar vermez)');
+  assert.ok(Math.hypot(a.x - e.x, a.y - e.y) > d0 + 1, 'çekilen birim rakipten uzaklaşır');
+  assert.ok(a.hp > 0, 'zırhsız piyon birkaç vuruştan sonra kaçıp kurtulur');
+  for (let i = 0; i < 20 * 15 && a.hp > 0 && !(a.hold && !a.retreat); i++) { step(g, 0.05); e.tx = e.ty = null; }
+  assert.ok(Math.hypot(a.x - base.x, a.y - base.y) < 2.5 && a.hold && !a.retreat && a.tx === null, 'çekilen birim ana üsse varır ve mevzi tutar');
+  // yeni emir bekleme durumunu bozar
+  commandMove(g, [a.id], 15, 10, 'attack'); assert.ok(!a.hold && !a.retreat, 'yeni emir mevzi tutmayı ve çekilmeyi iptal eder');
+  // en yakın kendi noktası: ele geçirilmiş bir nokta ana üsten daha yakınsa oraya gider
+  const g2 = arena(); const tower = g2.points.find(p => p.kind === 'kule' && Math.hypot(p.x - 12, p.y - 12) < 9); tower.owner = 0;
+  const b = spawnUnit(g2, 0, 'piyon', tower.x + 4, tower.y + 4);
+  commandRetreat(g2, [b.id]); assert.ok(Math.abs(b.tx - tower.x) < 1.5 && Math.abs(b.ty - tower.y) < 1.5, 'en yakın kendi noktasına çekilir');
+  // sahibi olmayan takım / boş liste
+  assert.equal(commandRetreat(g2, []), false);
+}
+// üretim ilerlemesi
+{
+  const g = createGame(); g.units = []; const t0 = spawnProgress(g, 0);
+  assert.ok(t0.total > 0 && t0.left <= t0.total && !t0.full);
+  g.teams[0].spawnT = 2; const t1 = spawnProgress(g, 0);
+  assert.ok(Math.abs((t0.total - 2) - t1.left) < 1e-9, 'kalan süre geçen süreyle azalır');
+  for (let i = 0; i < 20; i++) g.units.push({ id: 900 + i, team: 0, type: 'piyon', x: 1, y: 1, hp: 1, maxHp: 1 });
+  assert.equal(spawnProgress(g, 0).full, true, 'kapasite dolunca full');
+}
+console.log('geri çekilme ve üretim ilerlemesi testleri tamam');

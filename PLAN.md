@@ -125,6 +125,13 @@ Kullanıcı isteği: 3 arkadaşla (toplam 4 kişi), **farklı ağlardan**, linkl
 
 - **Amblem okunurluğu ve anlamı (iPhone geri bildirimi):** noktalardaki ♥ ♠ ♦ ♣ iskambil karakterleri oyunla ilgisizdi ve (metin karakteri oldukları için) iPhone'da iPhone'da emoji gibi çizilip rengini kaybedebildiği için mor zeminde zor görünüyordu. Artık işlevine uygun vektör amblemler çiziliyor (`emblemPath`/`drawEmblem`, `src/iso.js`): **köy** (ekonomi), **örs** (demirci), **nişangâh** (kule), **kale** (ana üs): ele geçirilmiş noktada **beyaz + koyu ince kenarlık**, tarafsızda silik gri. Kule amblemi kule gövdesinin üstünde. Piksel ölçümüyle test edildi.
 
+- **Üretim, menü ve geri çekilme (kullanıcı isteği):**
+  - **Üretim kartı ilerlemesi:** seçili üretim kartında sıradaki birime kalan süre dolan yeşil çember ve "n sn" olarak görünür; kapasite dolunca "Dolu". Diğer kartlar adını gösterir. (`spawnProgress` in `sim.js`)
+  - **Sağ üstte ☰ menü** (ses düğmesinin yerine): oyunu duraklatır; ▶ Devam, ses aç/kapat (tercih saklanır), 🔄 Yeniden başla, 🏠 Ana menü. Başka uygulamaya geçince otomatik duraklar (iPhone). Esc masaüstünde açar/kapatır.
+  - **↩ Geri çekil** (`commandRetreat`): seçili birimler savaşı bırakıp en yakın **kendi** noktasına (yoksa üsse) savaşmadan koşar, varınca mevzi tutar (kovalamaz); yeni emir bekleme durumunu bozar. Seçim varken **üsse dokunmak** da aynı komut. Seçim bırakılır; iki parmak dokunuşu geri alabilir.
+  - Tasarım kararı: normal dokunuş **saldır-hareket** olarak kaldı (savaştaki birim emri alsa da dövüşür, bilinçli). Savaştan kaçmak için ↩ Çekil / üsse dokunma / boşa basılı tutma kullanılır. Bu, kuralların öngörülebilir kalmasını sağlıyor.
+  - Bilinen bedel: kaçan birim sırtından vurulabilir (rakip daha hızlı ya da okçuysa); eşit hızlı rakip yakalayamaz. Yapay zeka geri çekilmeyi kullanmıyor (önceki denemede yapay zekayı zayıflatmıştı).
+
 ## Doğrulanmadı / açık işler
 - Gerçek telefonda dokunma hissi, performans (çok birimli savaşlar), ses.
 - Android APK derlemesi ve cihaza kurulumu; Pages yayını.

@@ -52,13 +52,13 @@ const inter = (a, b) => a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y 
     const boxes = await p.evaluate(() => {
       const r = id => { const el = document.getElementById(id); if (!el || el.hidden) return null; const b = el.getBoundingClientRect(); return { x: b.x, y: b.y, width: b.width, height: b.height }; };
       const { cam } = window.__game(); const mw = Math.min(190, cam.w * 0.32);
-      return { hud: r('hud'), mute: r('mute'), tut: r('tut'), sel: r('sel'), prod: r('prod'), skills: r('skills'), seed: r('seed'), mini: { x: cam.w - mw - 10, y: cam.h - mw / 2 - 10, width: mw, height: mw / 2 }, w: cam.w, h: cam.h };
+      return { hud: r('hud'), menubtn: r('menubtn'), tut: r('tut'), sel: r('sel'), prod: r('prod'), skills: r('skills'), seed: r('seed'), mini: { x: cam.w - mw - 10, y: cam.h - mw / 2 - 10, width: mw, height: mw / 2 }, w: cam.w, h: cam.h };
     });
     const list = Object.entries(boxes).filter(([k, v]) => v && typeof v === 'object');
     for (const [k, v] of list) ok(v.x >= -1 && v.y >= -1 && v.x + v.width <= boxes.w + 1 && v.y + v.height <= boxes.h + 1, `${name} ${w}x${h}: ${k} ekran içinde`);
     const names = list.map(([k]) => k);
     for (let i = 0; i < names.length; i++) for (let j = i + 1; j < names.length; j++) {
-      if (names[i] === 'tut' && names[j] === 'mute' || names[i] === 'mute' && names[j] === 'tut') continue; // bant mute'un solunda biter
+      if (names[i] === 'tut' && names[j] === 'menubtn' || names[i] === 'menubtn' && names[j] === 'tut') continue; // bant mute'un solunda biter
       ok(!inter(boxes[names[i]], boxes[names[j]]), `${name}: ${names[i]} ile ${names[j]} çakışmıyor`);
     }
   }

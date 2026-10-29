@@ -20,6 +20,11 @@
   button:active{background:#fff}
   #prod{position:fixed;left:max(10px,env(safe-area-inset-left));bottom:max(10px,env(safe-area-inset-bottom));display:flex;gap:8px}
   #prod button{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:64px;min-height:64px;padding:0 6px;line-height:1.1}
+  #prod button{position:relative;overflow:hidden}
+  #prod b,#prod small{position:relative;z-index:1}
+  #prod i{position:absolute;inset:0;pointer-events:none;background:conic-gradient(rgba(60,190,90,.55) calc(var(--pg,0) * 360deg),transparent 0)}
+  #prod button.on small{opacity:1;font-weight:700}
+  #prod button.full i{background:rgba(0,0,0,.22)}
   #prod b{font-size:24px;font-weight:400}
   #prod small{font-size:11px;opacity:.7}
   #sel{position:fixed;left:max(10px,env(safe-area-inset-left));bottom:calc(max(10px,env(safe-area-inset-bottom)) + 76px);display:flex;gap:8px}
@@ -35,8 +40,8 @@
   #toast[hidden]{display:none}
   #sel button{min-height:48px;min-width:64px;background:#ffd24a;font-size:16px}
   button.on{background:#ffd24a;outline:3px solid #fff}
-  #mute{position:fixed;top:calc(max(8px,env(safe-area-inset-top)) + 46px);right:8px;min-width:48px}
-  #msg[hidden],#menu[hidden],#tut[hidden]{display:none}
+  #menubtn{position:fixed;top:calc(max(8px,env(safe-area-inset-top)) + 46px);right:8px;min-width:48px;font-size:22px;z-index:2}
+  #msg[hidden],#menu[hidden],#tut[hidden],#pause[hidden]{display:none}
   #seed{position:fixed;top:calc(max(8px,env(safe-area-inset-top)) + 50px);left:12px;color:#fffb;font-size:12px;text-shadow:0 1px 2px #000;pointer-events:none}
   #seed[hidden]{display:none}
   #tut{position:fixed;top:calc(max(8px,env(safe-area-inset-top)) + 46px);left:8px;right:64px;background:#ffd24aee;color:#111;border-radius:10px;padding:8px 10px;display:flex;gap:10px;align-items:center;font-size:14px;line-height:1.3}
@@ -92,14 +97,16 @@
   @media (prefers-reduced-motion:reduce){#menu::before,.logo,#menu .big,.level{animation:none}}
 
   /* ---------- Bitiş ekranı ---------- */
-  #msg{z-index:5;position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;background:radial-gradient(90% 60% at 50% 40%,#0a2a5acc,#02081aee);color:#fff;text-align:center;animation:rise .35s both}
-  #msg>span{font-size:38px;font-weight:800;letter-spacing:.06em;background:linear-gradient(180deg,#fff,#ffd978);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 2px 8px #000a)}
-  #msg::before{font-size:70px;line-height:1;filter:drop-shadow(0 4px 10px #000a);margin-bottom:-6px}
+  #msg,#pause{z-index:5;position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;background:radial-gradient(90% 60% at 50% 40%,#0a2a5acc,#02081aee);color:#fff;text-align:center;animation:rise .35s both}
+  #msg>span,#pause>span{font-size:38px;font-weight:800;letter-spacing:.06em;background:linear-gradient(180deg,#fff,#ffd978);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 2px 8px #000a)}
+  #msg::before,#pause::before{font-size:70px;line-height:1;filter:drop-shadow(0 4px 10px #000a);margin-bottom:-6px}
   #msg.win::before{content:"🏆"}
   #msg.lose::before{content:"💥"}
   #msg.lose>span{background:linear-gradient(180deg,#fff,#ff9a9a);-webkit-background-clip:text;background-clip:text}
-  #msg button{min-width:0;min-height:50px;padding:0 22px;border-radius:999px;font-size:16px;font-weight:700;border:1px solid #ffffff30;background:#ffffff1a;color:#fff;backdrop-filter:blur(6px)}
-  #msg #next,#msg #retry.primary{background:linear-gradient(180deg,#ffe58f,#ffb21f);color:#3a2600;border-color:transparent}
+  #pause::before{content:"⏸️"}
+  #pause .col{display:flex;flex-direction:column;gap:12px;width:min(300px,80vw)}
+  #msg button,#pause button{min-width:0;min-height:50px;padding:0 22px;border-radius:999px;font-size:16px;font-weight:700;border:1px solid #ffffff30;background:#ffffff1a;color:#fff;backdrop-filter:blur(6px)}
+  #msg #next,#msg #retry.primary,#pause .primary{background:linear-gradient(180deg,#ffe58f,#ffb21f);color:#3a2600;border-color:transparent}
   /* yatay (kısa) ekran: düğmeler biraz küçülür */
   @media (max-height:520px){
     #menu{gap:10px}.brand h1{font-size:21px}.logo{width:56px;height:56px}.brand p{display:none}.level{padding:8px 12px}.chip{padding:8px 10px}
@@ -122,13 +129,13 @@
   <button data-skill="hiz" title="Hız: alandaki dostlar hızlanır (E)"><i></i><b>⚡</b><small>Hız</small></button>
 </div>
 <div id="toast" hidden></div>
-<div id="sel" hidden><button id="stop">✋ Dur</button><button id="selclear" title="Seçimi bırak">✕</button></div>
+<div id="sel" hidden><button id="stop">✋ Dur</button><button id="retreat" title="Savaşı bırak, en yakın noktana koş">↩ Çekil</button><button id="selclear" title="Seçimi bırak">✕</button></div>
 <div id="prod">
-  <button data-prod="piyon" title="Piyon"><b>⚔️</b><small>Piyon</small></button>
-  <button data-prod="okcu" title="Okçu"><b>🏹</b><small>Okçu</small></button>
-  <button data-prod="zirh" title="Zırhlı"><b>🛡️</b><small>Zırhlı</small></button>
+  <button data-prod="piyon" title="Piyon"><i></i><b>⚔️</b><small>Piyon</small></button>
+  <button data-prod="okcu" title="Okçu"><i></i><b>🏹</b><small>Okçu</small></button>
+  <button data-prod="zirh" title="Zırhlı"><i></i><b>🛡️</b><small>Zırhlı</small></button>
 </div>
-<button id="mute">🔊</button>
+<button id="menubtn" title="Menü">☰</button>
 <div id="tut" hidden><span id="tut-n"></span><p id="tut-text"></p><button id="tut-skip">Atla</button></div>
 <div id="menu">
   <header class="brand">
@@ -148,6 +155,7 @@
     <button id="play" class="big">▶ BAŞLA</button>
   </section>
 </div>
+<div id="pause" hidden><span>Duraklatıldı</span><div class="col"><button id="p-resume" class="primary">▶ Devam</button><button id="p-sound">🔊 Ses: Açık</button><button id="p-restart">🔄 Yeniden başla</button><button id="p-menu">🏠 Ana menü</button></div></div>
 <div id="msg" hidden><span></span><div class="row"><button id="next" hidden>Sonraki bölüm</button><button id="retry">Yeniden dene</button><button id="restart">Menü</button></div></div>
 <script type="module" src="src/main.js"></script>
 </body>

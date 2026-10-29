@@ -171,6 +171,40 @@ const ok = (c, m) => { if (!c) throw new Error('BAŞARISIZ: ' + m); console.log(
   await touch('touchStart', [{ x: 150, y: 300 }, { x: 230, y: 300 }]); await wait(80); await touch('touchEnd', []); await wait(600);
   ok(await p.evaluate(() => window.__game().ui.aimSkill === null), 'iki parmakla dokunma yetenek hedeflemeyi iptal ediyor');
 
+  // --- Üretim kartında ilerleme ---
+  await freeze(); await wait(150);
+  const cards = () => p.evaluate(() => [...document.querySelectorAll('[data-prod]')].map(b => ({ k: b.dataset.prod, on: b.classList.contains('on'), t: b.querySelector('small').textContent, pg: parseFloat(b.style.getPropertyValue('--pg') || '0') })));
+  let cs = await cards();
+  ok(cs.find(c => c.on).t.match(/^(\d+ sn|Dolu)$/) && cs.filter(c => !c.on).every(c => c.t === (c.k === 'okcu' ? 'Okçu' : 'Zırhlı')), 'seçili üretim kartı kalan süreyi gösteriyor, diğerleri adını');
+  await p.evaluate(() => { const { game } = window.__game(); game.teams[0].spawnT = 0; game.units = game.units.filter(u => u.team !== 0 || game.units.indexOf(u) < 2); });
+  await p.tap('[data-prod="okcu"]'); await wait(200);
+  const c1 = (await cards()).find(c => c.k === 'okcu');
+  await p.evaluate(() => { window.__game().game.teams[0].spawnT = 3; }); await wait(150);
+  const c2 = (await cards()).find(c => c.k === 'okcu');
+  ok(c1.on && c2.pg > c1.pg && c2.t !== c1.t, `üretim çemberi doluyor (${c1.pg} → ${c2.pg}) ve saniye azalıyor (${c1.t} → ${c2.t})`);
+  await p.evaluate(() => { const { game } = window.__game(); for (let i = 0; i < 25; i++) game.units.push({ id: 5000 + i, team: 0, type: 'piyon', x: game.points.find(q => q.base && q.team === 0).x - 1 + (i % 5) * 0.5, y: game.points.find(q => q.base && q.team === 0).y + 2 + Math.floor(i / 5) * 0.5, hp: 1000, maxHp: 1000, tx: null, ty: null, mode: 'attack', hold: true, haste: 0, cd: 0, atk: 0, moving: false, fx: 0, fy: 0 }); }); await wait(150);
+  const dolu = await p.evaluate(() => { const { game } = window.__game(); return { n: game.units.filter(u => u.team === 0).length, owned: game.points.filter(q => q.owner === 0).length, txt: [...document.querySelectorAll('[data-prod].on small')].map(e => e.textContent).join() }; });
+  ok((await wait(250), (await cards()).find(c => c.on).t === 'Dolu'), `kapasite dolunca kartta "Dolu" yazıyor (${JSON.stringify(dolu)})`);
+  await p.evaluate(() => { const { game } = window.__game(); game.units = game.units.filter(u => u.id < 5000); }); await p.tap('[data-prod="piyon"]');
+
+  // --- ↩ Çekil: düğme ve üsse dokunma ---
+  await freeze(); await wait(150);
+  await p.evaluate(() => { const { game, cam } = window.__game(); const b4 = game.points.find(x => x.base && x.team === 0); cam.zoom = 0.7; cam.x = (b4.x - b4.y) * 32; cam.y = (b4.x + b4.y) * 16; }); await wait(150);
+  const bxy3 = await tileXY(base.i + 0.4, base.j - 0.9);
+  await p.touchscreen.tap(bxy3.x, bxy3.y); await wait(450);   // seçim yokken üsse dokun = hepsini seç
+  { const t = await st(); ok(t.sel === t.units && t.sel >= 2, `üsse dokununca hepsi seçildi (${t.sel}/${t.units}, çekilme senaryosu)`); }
+  await p.tap('#retreat'); await wait(150);
+  const rt = await p.evaluate(() => { const { game, ui } = window.__game(); const us = game.units.filter(u => u.team === 0); return { sel: ui.selected.size, all: us.every(u => u.retreat && u.mode === 'move' && u.tx !== null), toast: !document.getElementById('toast').hidden }; });
+  ok(rt.sel === 0 && rt.all && rt.toast, '↩ Çekil düğmesi: birimler savaşmadan çekiliyor, seçim bırakılıyor, mesaj çıkıyor');
+  await wait(2500);
+  ok(await p.evaluate(() => window.__game().game.units.filter(u => u.team === 0).every(u => !u.retreat && u.hold && u.tx === null)), 'çekilen birimler varınca mevzi tutuyor');
+  await freeze(); await wait(150);
+  const au = await unitXY(0);
+  await p.touchscreen.tap(au.x, au.y); await wait(450);
+  await p.touchscreen.tap(bxy3.x, bxy3.y); await wait(300);
+  const rt2 = await p.evaluate(() => { const { game, ui } = window.__game(); const u = game.units.filter(x => x.team === 0)[0]; return { sel: ui.selected.size, retreat: u.retreat, mode: u.mode }; });
+  ok(rt2.sel === 0 && rt2.retreat && rt2.mode === 'move', 'seçiliyken üsse dokunmak da geri çekilmeyi başlatıyor');
+
   // yanlış seçilen birim: boşa çift dokun -> emir geri alınır, seçim bırakılır
   await freeze(); await wait(100);
   const w = await unitXY(0);
@@ -220,6 +254,22 @@ const ok = (c, m) => { if (!c) throw new Error('BAŞARISIZ: ' + m); console.log(
   await touch('touchEnd', []); await wait(600);
   const after = await p.evaluate(() => { const { cam, ui } = window.__game(); return { x: cam.x, y: cam.y, z: cam.zoom, moved: ui.camMoved }; });
   ok(after.moved && (Math.hypot(after.x - before.x, after.y - before.y) > 20) && after.z > before.z, 'iki parmak haritayı kaydırıyor ve yakınlaştırıyor');
+
+  // --- Duraklatma menüsü (☰) ---
+  ok(await p.isVisible('#menubtn') && !(await p.isVisible('#mute')), 'sağ üstte menü düğmesi var, ses düğmesi yok');
+  await p.tap('#menubtn'); await wait(200);
+  const pt0 = await p.evaluate(() => window.__game().game.t); await wait(700);
+  const pt1 = await p.evaluate(() => window.__game().game.t);
+  ok(await p.isVisible('#pause') && Math.abs(pt1 - pt0) < 0.001, 'menü açılınca oyun duruyor');
+  await p.tap('#p-sound'); await wait(100);
+  ok((await p.textContent('#p-sound')).includes('Kapalı') && (await p.evaluate(() => localStorage.getItem('sw-mute'))) === '1', 'ses kapatıldı ve tercih saklandı');
+  await p.tap('#p-sound'); ok((await p.textContent('#p-sound')).includes('Açık'), 'ses yeniden açıldı');
+  await p.tap('#p-resume'); await wait(500);
+  ok(!(await p.isVisible('#pause')) && (await p.evaluate(() => window.__game().game.t)) > pt1 + 0.2, '▶ Devam ile oyun kaldığı yerden sürüyor');
+  await p.tap('#menubtn'); await p.tap('#p-restart'); await wait(500);
+  ok((await p.evaluate(() => window.__game().game.t)) < 1.5 && !(await p.isVisible('#pause')), '🔄 Yeniden başla yeni oyun başlatıyor');
+  await p.tap('#menubtn'); await p.tap('#p-menu'); await wait(300);
+  ok(await p.isVisible('#menu') && !(await p.isVisible('#pause')), '🏠 Ana menü giriş ekranına dönüyor');
 
   ok(errs.length === 0, 'konsol hatası yok' + (errs.length ? ': ' + errs.join(' | ') : ''));
   await browser.close(); server.close();
