@@ -1,5 +1,5 @@
 import { CFG } from './config.js';
-import { createGame, step, commandStop, ownedCount, unitCount, capacity, spawnInterval, buff } from './sim.js';
+import { createGame, step, commandStop, castSkill, ownedCount, unitCount, capacity, spawnInterval, buff } from './sim.js';
 import { createAI, stepAI, DIFFICULTY } from './ai.js';
 import { render, toScreen, toWorld, clampCam } from './iso.js';
 import { bindInput } from './input.js';
@@ -20,7 +20,7 @@ try { const d = localStorage.getItem('sw-diff'); if (d in DIFFICULTY) diff = d; 
 const cam = { x: 0, y: 0, zoom: 1, w: 0, h: 0 };
 const fx = createFx();
 const vision = createVision();
-const ui = { selected: new Set(), toast: null, box: null, arrow: null, pings: [], camMoved: false, usedRun: false, time: 0, groups: [[], [], []], fx, vision, project: (i, j) => toScreen(cam, i, j) };
+const ui = { aimSkill: null, aim: null, usedSkill: false, cast: null, selected: new Set(), toast: null, box: null, arrow: null, pings: [], camMoved: false, usedRun: false, time: 0, groups: [[], [], []], fx, vision, project: (i, j) => toScreen(cam, i, j) };
 
 // Çizim boyutu, tuvalin gerçek (CSS) boyutundan alınır; böylece iPhone Safari'de adres çubuğu açılıp kapanınca
 // çizim ile dokunma koordinatları kaymaz. Yakınlaştırma yeniden boyutlandırmada sıfırlanmaz.
@@ -43,6 +43,24 @@ bindInput(canvas, cam, () => game, ui);
 canvas.addEventListener('pointerdown', unlockAudio);
 document.getElementById('mute').onclick = e => { unlockAudio(); setMuted(!isMuted()); e.target.textContent = isMuted() ? '🔇' : '🔊'; };
 
+// Özel yetenekler: düğmeye dokun -> hedefleme (alanı göster, bırakınca kullan). Soğuma süresi düğme üstünde görünür.
+ui.cast = (id, x, y) => { const ok = castSkill(game, 0, id, x, y); if (ok) { clickSound(); ui.lastCast = { id, x, y }; } return ok; };
+const skillBtns = [...document.querySelectorAll('[data-skill]')];
+const toast = text => { ui.toast = { text, t: performance.now() }; };
+skillBtns.forEach(b => b.onclick = () => {
+  const id = b.dataset.skill, left = game.teams[0].skills[id];
+  if (left > 0) { toast(`${CFG.skills[id].ad}: ${Math.ceil(left)} sn sonra hazır`); return; }
+  ui.aimSkill = ui.aimSkill === id ? null : id; ui.aim = null;
+  if (ui.aimSkill) toast(`${CFG.skills[id].ad}: alana parmağını bas, ayarla, bırak`);
+  clickSound();
+});
+const showSkills = () => skillBtns.forEach(b => {
+  const id = b.dataset.skill, S = CFG.skills[id], left = Math.max(0, game.teams[0].skills[id]);
+  b.style.setProperty('--cd', (left / S.cd).toFixed(3));
+  b.classList.toggle('cool', left > 0); b.classList.toggle('aim', ui.aimSkill === id);
+  b.querySelector('small').textContent = left > 0 ? Math.ceil(left) : S.kisa;
+});
+
 // Seçim varken beliren küçük çubuk: ✋ Dur ve ✕ (seçimi bırak)
 const selBar = document.getElementById('sel'), selClear = document.getElementById('selclear');
 document.getElementById('stop').onclick = () => { commandStop(game, [...ui.selected]); clickSound(); };
@@ -55,7 +73,8 @@ const recallGroup = n => { ui.groups[n] = ui.groups[n].filter(alive); ui.selecte
 window.addEventListener('keydown', e => {
   if (e.key >= '1' && e.key <= '3') { const n = +e.key - 1; if (e.ctrlKey || e.metaKey) { e.preventDefault(); saveGroup(n); } else recallGroup(n); }
   else if (e.key === 's' || e.key === 'S') commandStop(game, [...ui.selected]);
-  else if (e.key === 'Escape') ui.selected.clear();
+  else if (e.key === 'Escape') { ui.selected.clear(); ui.aimSkill = null; ui.aim = null; }
+  else if ('qwe'.includes(e.key.toLowerCase()) && e.key.length === 1) skillBtns['qwe'.indexOf(e.key.toLowerCase())].click();
 });
 const prodBtns = [...document.querySelectorAll('[data-prod]')];
 const showProd = () => prodBtns.forEach(b => b.classList.toggle('on', game.teams[0].prod === b.dataset.prod));
@@ -74,8 +93,11 @@ function buildLevels() {
   LEVELS.forEach((lv, i) => {
     const open = isUnlocked(progress, i), done = progress.done.includes(lv.id);
     const b = document.createElement('button');
-    b.className = 'level'; b.disabled = !open;
-    b.innerHTML = `<b>${open ? (done ? '✓' : '▶') : '🔒'} ${i === 0 ? '' : i + '. '}${lv.ad}</b><small>${lv.ipucu}</small>`;
+    b.className = 'level' + (done ? ' done' : ''); b.disabled = !open; b.style.setProperty('--i', i);
+    const rakip = lv.enemies.length, d = DIFFICULTY[lv.diff];
+    b.innerHTML = `<span class="num">${done ? '✓' : open ? (i === 0 ? '★' : i) : '🔒'}</span>
+      <span class="txt"><b>${lv.ad}</b><small>${lv.ipucu}</small></span>
+      <span class="meta"><em class="pill d-${lv.diff}">${d.label}</em><em class="pill">${rakip} rakip</em></span>`;
     b.onclick = () => { unlockAudio(); startGame({ ...lv, levelId: lv.id, idx: i }); };
     levelsEl.appendChild(b);
   });
@@ -93,7 +115,7 @@ $('play').onclick = () => {
 function startGame(cfg) {
   current = cfg;
   game = createGame({ seed: cfg.seed, seats: [0, ...cfg.enemies], startUnits: 3 });
-  ui.vision = createVision(); ui.selected.clear(); ui.groups = [[], [], []]; ui.camMoved = false; ui.usedRun = false; ui.pings.length = 0;
+  ui.vision = createVision(); ui.selected.clear(); ui.groups = [[], [], []]; ui.camMoved = false; ui.usedRun = false; ui.usedSkill = false; ui.aimSkill = null; ui.aim = null; ui.pings.length = 0;
   ais = cfg.enemies.map(t => createAI(t, cfg.diff, cfg.aiDelay || 0));
   fit(); defaultZoom(); focusBase();
   tut = cfg.tutorial ? createTutorial(game, cam, ui) : null;
@@ -102,6 +124,8 @@ function startGame(cfg) {
 function showEnd(won) {
   msg.hidden = false; ended = true;
   msg.firstChild.textContent = won ? 'Kazandın!' : 'Kaybettin';
+  msg.classList.toggle('win', won); msg.classList.toggle('lose', !won);
+  $('retry').classList.toggle('primary', !won);
   if (won && current.levelId && !progress.done.includes(current.levelId)) { progress.done.push(current.levelId); saveProgress(progress); }
   const nextLv = won && current.idx != null ? LEVELS[current.idx + 1] : null;
   $('next').hidden = !nextLv;
@@ -122,7 +146,7 @@ function frame(now) {
   game.events.length = 0;
   for (const id of [...ui.selected]) if (!game.units.some(u => u.id === id)) ui.selected.delete(id);
   render(ctx, cam, game, ui);
-  const t = 0; showProd();
+  const t = 0; showProd(); showSkills();
   const tt = document.getElementById('toast'); tt.hidden = !(ui.toast && performance.now() - ui.toast.t < 1400); if (!tt.hidden) tt.textContent = ui.toast.text;
   selBar.hidden = ui.selected.size === 0; selClear.textContent = `✕ ${ui.selected.size}`;
   for (const pg of ui.pings.splice(0)) fx.add({ type: 'ping', ...pg });

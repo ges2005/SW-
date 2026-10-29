@@ -114,6 +114,15 @@ Kullanıcı isteği: 3 arkadaşla (toplam 4 kişi), **farklı ağlardan**, linkl
 - Komutlar tek bir yerden geçsin (şu an `commandMove`/`commandStop` doğrudan çağrılıyor); ileride ağ üzerinden gönderilecek bir "komut" arayüzüne çevrilecek.
 - Simülasyon dışında rastgelelik (`Math.random`) yalnızca yapay zekada kalsın (yalnızca kurucu çalıştırır).
 
+- **Özel yetenekler (kullanıcı isteği, 3 adet):** her takımın üçü de var, alan etkili, bekleme süreli (başlangıçta 15 sn beklenir). Değerler `CFG.skills`.
+  - 💚 **Şifa:** alandaki dost birliklere en yüksek canlarının %30'unu basar (yarıçap 3,2; bekleme 45 sn).
+  - ☄️ **Ok Yağmuru:** alandaki düşman birliklere 45 hasar (yarıçap 2,6; bekleme 35 sn).
+  - ⚡ **Hız:** alandaki dostlar 6 sn %60 hızlı koşar ve %50 hızlı vurur (yarıçap 3,4; bekleme 40 sn).
+  - Kullanım (`src/input.js`, `src/main.js`): sağdaki yuvarlak düğmeye dokun, haritada parmağı bas (alan parmağın 44 px üstünde görünür), sürükleyip ayarla, bırakınca kullan. İki parmakla dokunma hedeflemeyi iptal eder. Düğmede soğuma çemberi ve kalan saniye görünür. Masaüstü: Q/W/E.
+  - Yapay zeka da kullanır: kolay hiç, normal Şifa + Ok Yağmuru, zor üçünü (eşikler `DIFFICULTY[..].skills`). Zorluk sıralaması yeteneklerle yeniden ölçüldü ve korundu (6 oyun/koltuk: zor 6,8 / normal 2,3 klasik; zor 6,7 / normal 3,4 rastgele; normal 6,5 / kolay 2,2 klasik).
+  - Efektler (yayılan dolgulu elips, ✚ parçacıkları, düşen oklar, hız çizgileri) ve sesler eklendi. Sim olayı: `skill`.
+- **Giriş ekranı yenilendi:** logo ve degrade başlık, hareketli izometrik desenli arka plan, cam efektli seviye kartları (numara/✓/🔒 rozeti, zorluk ve rakip sayısı etiketi), seçim çipleri (emojili), parlayan BAŞLA düğmesi, bitiş ekranında 🏆/💥. `prefers-reduced-motion` desteklenir.
+
 ## Doğrulanmadı / açık işler
 - Gerçek telefonda dokunma hissi, performans (çok birimli savaşlar), ses.
 - Android APK derlemesi ve cihaza kurulumu; Pages yayını.

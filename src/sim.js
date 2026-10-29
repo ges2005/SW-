@@ -8,7 +8,7 @@ export function createGame(opts = {}) {
   const { seed = 0, seats = [0, 1, 2, 3], startUnits = 3 } = opts;
   const g = {
     t: 0, nextId: 1, units: [], points: buildPoints(seed, seats), seed, seats,
-    teams: CFG.teams.map((_, i) => ({ id: i, alive: seats.includes(i), spawnT: 0, prod: 'piyon' })),
+    teams: CFG.teams.map((_, i) => ({ id: i, alive: seats.includes(i), spawnT: 0, prod: 'piyon', skills: Object.fromEntries(Object.keys(CFG.skills).map(k => [k, CFG.skillStartCd])) })),
     winner: -1, events: [], // çizim/ses katmanının tükettiği olaylar
   };
   for (const t of seats) for (let k = 0; k < startUnits; k++) spawn(g, t, k, 'piyon');
@@ -32,7 +32,7 @@ function basePoint(g, t) { return g.points.find(p => p.base && p.team === t); }
 
 export function spawnUnit(g, t, type, x, y) {
   const hp = CFG.types[type].hp * buff(g, t);
-  const u = { id: g.nextId++, team: t, type, x, y, hp, maxHp: hp, tx: null, ty: null, mode: 'attack', hold: false, cd: 0, atk: 0, moving: false, fx: 0, fy: 0 };
+  const u = { id: g.nextId++, team: t, type, x, y, hp, maxHp: hp, tx: null, ty: null, mode: 'attack', hold: false, haste: 0, cd: 0, atk: 0, moving: false, fx: 0, fy: 0 };
   g.units.push(u);
   return u;
 }
@@ -58,6 +58,20 @@ export function commandMove(g, ids, x, y, mode = 'attack') {
   });
 }
 
+// Özel yetenek: alana etki eder. Başarılıysa true (bekleme yoksa ve takım hayattaysa).
+export function castSkill(g, team, id, x, y) {
+  const S = CFG.skills[id], tm = g.teams[team];
+  if (!S || !tm || !tm.alive || tm.skills[id] > 0 || g.winner !== -1) return false;
+  x = Math.max(0, Math.min(CFG.mapSize, x)); y = Math.max(0, Math.min(CFG.mapSize, y));
+  const inArea = u => Math.hypot(u.x - x, u.y - y) <= S.radius;
+  if (id === 'sifa') for (const u of g.units) { if (u.team === team && inArea(u)) u.hp = Math.min(u.maxHp, u.hp + S.heal * u.maxHp); }
+  else if (id === 'yagmur') for (const u of g.units) { if (u.team !== team && inArea(u)) u.hp -= S.dmg; }
+  else if (id === 'hiz') for (const u of g.units) { if (u.team === team && inArea(u)) u.haste = S.dur; }
+  tm.skills[id] = S.cd;
+  g.events.push({ type: 'skill', skill: id, x, y, team, r: S.radius });
+  return true;
+}
+
 // Dur: hedefi iptal eder ve mevzi tutar (yalnızca menzildeki düşmana vurur, kovalamaz)
 export function commandStop(g, ids) {
   const set = new Set(ids);
@@ -67,6 +81,7 @@ export function commandStop(g, ids) {
 export function step(g, dt) {
   if (g.winner !== -1) return;
   g.t += dt;
+  for (const tm of g.teams) if (tm.alive) for (const k in tm.skills) tm.skills[k] = Math.max(0, tm.skills[k] - dt);
 
   // üretim
   for (const tm of g.teams) {
@@ -80,7 +95,8 @@ export function step(g, dt) {
 
   // savaş ve hareket
   for (const u of g.units) {
-    u.cd = Math.max(0, u.cd - dt);
+    const hasted = u.haste > 0; u.haste = Math.max(0, u.haste - dt);
+    u.cd = Math.max(0, u.cd - dt * (hasted ? CFG.skills.hiz.atkMult : 1));
     u.atk = Math.max(0, u.atk - dt);
     u.moving = false;
     let foe = null, fd = Infinity;
@@ -105,7 +121,7 @@ export function step(g, dt) {
     if (gx !== null) {
       const dx = gx - u.x, dy = gy - u.y, d = Math.hypot(dx, dy);
       if (d < 0.1) { if (!chase) { u.tx = u.ty = null; u.mode = 'attack'; } }
-      else { const s = Math.min(d, U.speed * dt); u.x += dx / d * s; u.y += dy / d * s; u.moving = true; u.fx = dx / d; u.fy = dy / d; }
+      else { const s = Math.min(d, U.speed * (hasted ? CFG.skills.hiz.mult : 1) * dt); u.x += dx / d * s; u.y += dy / d * s; u.moving = true; u.fx = dx / d; u.fy = dy / d; }
     }
   }
   // ayrışma (üst üste binmesinler)

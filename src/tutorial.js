@@ -9,6 +9,7 @@ export function createTutorial(game, cam, ui) {
     { text: 'Üretilecek türü sol alttaki kartlardan seç: ⚔️ 🏹 🛡️. Piyon okçuyu, okçu zırhlıyı, zırhlı piyonu yener. Birini değiştir.', done: () => game.teams[0].prod !== 'piyon' },
     { text: 'Haritayı iki parmakla kaydır ve yakınlaştır. Köşedeki mini haritaya dokunarak da gidebilirsin.', done: () => ui.camMoved },
     { text: 'Seçiliyken boş bir yere basılı tut: birimler savaşmadan koşar (geri çekilme). ✋ Dur yerinde tutar, ✕ seçimi bırakır. Basılı tutmayı dene.', done: () => ui.usedRun },
+    { text: 'Sağdaki özel yetenekler: 💚 Şifa (alandaki dostlara %30 can), ☄️ Ok Yağmuru (düşmanlara hasar), ⚡ Hız. Birine dokun, sonra haritada parmağını bas, alanı ayarla ve bırak. Hepsinin bekleme süresi var; ilk 15 sn dolar. Birini kullan.', done: () => ui.usedSkill },
     { text: 'Koyu alan keşfedilmemiş, soluk alan şu an görünmüyor; düşmanı ancak gördüğünde bilirsin. Rakibin ana noktasını (köşedeki büyük kare) ele geçirirsen kazanırsın. Başarılar!', done: null },
   ];
   let i = 0, doneAt = 0;

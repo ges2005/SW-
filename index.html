@@ -24,44 +24,103 @@
   #prod small{font-size:11px;opacity:.7}
   #sel{position:fixed;left:max(10px,env(safe-area-inset-left));bottom:calc(max(10px,env(safe-area-inset-bottom)) + 76px);display:flex;gap:8px}
   #sel[hidden]{display:none}
+  #skills{position:fixed;right:max(10px,env(safe-area-inset-right));bottom:calc(max(10px,env(safe-area-inset-bottom)) + 84px);display:flex;flex-direction:column;gap:8px;z-index:2}
+  #skills button{position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;width:62px;min-width:62px;min-height:62px;padding:0;border-radius:50%;line-height:1.05;background:#fffe}
+  #skills b{font-size:24px;font-weight:400;position:relative;z-index:1}
+  #skills small{font-size:10px;font-weight:600;position:relative;z-index:1;opacity:.75}
+  #skills i{position:absolute;inset:0;background:conic-gradient(#0009 calc(var(--cd,0) * 360deg),transparent 0);border-radius:50%;pointer-events:none}
+  #skills button.cool b{opacity:.45}
+  #skills button.aim{background:#ffd24a;outline:3px solid #fff;box-shadow:0 0 14px #ffd24a}
   #toast{position:fixed;left:50%;top:38%;transform:translateX(-50%);background:#000b;color:#fff;padding:10px 16px;border-radius:12px;font-size:15px;pointer-events:none;z-index:3;white-space:nowrap}
   #toast[hidden]{display:none}
   #sel button{min-height:48px;min-width:64px;background:#ffd24a;font-size:16px}
   button.on{background:#ffd24a;outline:3px solid #fff}
   #mute{position:fixed;top:calc(max(8px,env(safe-area-inset-top)) + 46px);right:8px;min-width:48px}
   #msg[hidden],#menu[hidden],#tut[hidden]{display:none}
-  .row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
-  #menu{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;gap:14px;padding:max(24px,env(safe-area-inset-top)) 16px 24px;background:linear-gradient(#0b2a55,#050d1a);color:#fff;overflow:auto;font-size:18px;z-index:5}
-  #menu h1{margin:8px 0 0;font-size:28px;text-align:center}
-  #menu .lbl{margin-top:8px;opacity:.8;text-align:center}
-  #menu .big{min-width:200px;min-height:60px;font-size:22px;background:#ffd24a;margin-top:18px;align-self:center}
-  #tab-camp,#tab-quick{display:flex;flex-direction:column;gap:10px;width:min(420px,100%)}
-  #tab-camp[hidden],#tab-quick[hidden]{display:none}
-  #levels{display:flex;flex-direction:column;gap:8px}
-  .level{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-height:58px;padding:8px 14px;text-align:left}
-  .level small{opacity:.65;font-size:13px}
-  .level:disabled{opacity:.4}
   #seed{position:fixed;top:calc(max(8px,env(safe-area-inset-top)) + 50px);left:12px;color:#fffb;font-size:12px;text-shadow:0 1px 2px #000;pointer-events:none}
   #seed[hidden]{display:none}
   #tut{position:fixed;top:calc(max(8px,env(safe-area-inset-top)) + 46px);left:8px;right:64px;background:#ffd24aee;color:#111;border-radius:10px;padding:8px 10px;display:flex;gap:10px;align-items:center;font-size:14px;line-height:1.3}
   #tut p{margin:0;flex:1}
   #tut button{min-height:40px;min-width:56px;padding:0 10px;font-size:14px;background:#fff}
   #tut span{font-weight:700;opacity:.7}
-  #msg{z-index:5;position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:#000a;color:#fff;font-size:36px}
+
+  /* ---------- Giriş ekranı ---------- */
+  .row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+  #menu{position:fixed;inset:0;z-index:5;display:flex;flex-direction:column;align-items:center;gap:16px;padding:max(26px,env(safe-area-inset-top)) 16px max(28px,env(safe-area-inset-bottom));color:#fff;overflow:auto;
+    background:radial-gradient(120% 70% at 50% -10%,#2a6fd6 0%,#123a7a 38%,#061a38 75%,#030c1e 100%)}
+  #menu::before{content:"";position:fixed;inset:-40px;z-index:0;pointer-events:none;opacity:.10;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='56'%3E%3Cpath d='M48 2 94 28 48 54 2 28Z' fill='none' stroke='white' stroke-width='1.5'/%3E%3C/svg%3E");
+    background-size:96px 56px;animation:drift 50s linear infinite}
+  #menu>*{position:relative;z-index:1}
+  @keyframes drift{to{background-position:96px 56px}}
+  @keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  @keyframes pulse{0%,100%{box-shadow:0 8px 26px #ffb80066,0 0 0 0 #ffd24a55}50%{box-shadow:0 8px 30px #ffb800aa,0 0 0 10px #ffd24a00}}
+  .brand{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;margin-top:6px}
+  .logo{width:84px;height:84px;border-radius:22px;box-shadow:0 10px 30px #0008,0 0 0 2px #ffffff30;animation:floaty 4s ease-in-out infinite}
+  .brand h1{margin:10px 0 0;font-size:27px;font-weight:800;letter-spacing:.14em;line-height:1.1;background:linear-gradient(180deg,#fff 20%,#ffd978 100%);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 2px 6px #0007)}
+  .brand h1 span{display:block;font-size:.62em;letter-spacing:.42em;opacity:.9;margin-bottom:2px}
+  .brand p{margin:2px 0 0;font-size:14px;opacity:.78;max-width:300px}
+  #menu button{min-width:0;min-height:0;border:0;font-family:inherit;color:#fff;cursor:pointer;transition:transform .12s,background .2s,box-shadow .2s;-webkit-tap-highlight-color:transparent}
+  #menu button:active{transform:scale(.97)}
+  .seg{display:inline-flex;padding:4px;gap:2px;border-radius:999px;background:#ffffff14;border:1px solid #ffffff22;backdrop-filter:blur(6px)}
+  .seg button{background:transparent;padding:11px 20px;border-radius:999px;font-size:15px;font-weight:700;opacity:.8}
+  #menu .seg button.on{background:linear-gradient(180deg,#ffe08a,#ffb938);color:#3a2600;opacity:1;outline:0;box-shadow:0 4px 14px #ffb93866}
+  #tab-camp,#tab-quick{display:flex;flex-direction:column;gap:12px;width:min(440px,100%)}
+  #tab-camp[hidden],#tab-quick[hidden]{display:none}
+  #levels{display:flex;flex-direction:column;gap:10px}
+  .level{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;width:100%;text-align:left;padding:12px 14px;border-radius:18px;
+    background:linear-gradient(180deg,#ffffff1c,#ffffff0c);border:1px solid #ffffff26 !important;backdrop-filter:blur(8px);animation:rise .5s both;animation-delay:calc(var(--i,0) * 60ms);box-shadow:0 6px 18px #0004}
+  .level .num{display:grid;place-items:center;width:46px;height:46px;border-radius:14px;font-size:20px;font-weight:800;background:linear-gradient(160deg,#3d8bff,#1b4fb8);box-shadow:inset 0 1px 0 #fff5,0 4px 10px #0005}
+  .level .txt{display:flex;flex-direction:column;gap:2px;min-width:0}
+  .level .txt b{font-size:17px;font-weight:700}
+  .level .txt small{font-size:12.5px;opacity:.68}
+  .level .meta{display:flex;flex-direction:column;gap:4px;align-items:flex-end}
+  .pill{font-style:normal;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;background:#ffffff1f;white-space:nowrap}
+  .pill.d-kolay{background:#2fbf6a55;color:#b9ffd2}.pill.d-normal{background:#f5b32e55;color:#ffe3a1}.pill.d-zor{background:#ee4b4b55;color:#ffc2c2}
+  .level.done .num{background:linear-gradient(160deg,#4cd47e,#1f8f4d)}
+  .level.done{border-color:#4cd47e66 !important}
+  .level:disabled{opacity:.42;filter:grayscale(.6);cursor:default}
+  .level:disabled .num{background:#ffffff1f;box-shadow:none}
+  .opt{display:flex;flex-direction:column;gap:8px}
+  .opt label{font-size:12.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;opacity:.7;text-align:center}
+  .chips{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+  .chip{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:92px;padding:11px 12px;border-radius:16px;font-size:14px;font-weight:700;background:#ffffff14;border:1px solid #ffffff26 !important;backdrop-filter:blur(6px)}
+  .chip b{font-size:22px;font-weight:400}
+  #menu .chip.on{background:linear-gradient(180deg,#ffe08a,#ffb938);color:#3a2600;outline:0;border-color:#fff8 !important;box-shadow:0 6px 18px #ffb93855}
+  #menu .big{align-self:center;margin-top:10px;padding:17px 46px;border-radius:999px;font-size:20px;font-weight:800;letter-spacing:.12em;color:#3a2600;background:linear-gradient(180deg,#ffe58f,#ffb21f);animation:pulse 2.4s ease-in-out infinite}
+  @media (prefers-reduced-motion:reduce){#menu::before,.logo,#menu .big,.level{animation:none}}
+
+  /* ---------- Bitiş ekranı ---------- */
+  #msg{z-index:5;position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;background:radial-gradient(90% 60% at 50% 40%,#0a2a5acc,#02081aee);color:#fff;text-align:center;animation:rise .35s both}
+  #msg>span{font-size:38px;font-weight:800;letter-spacing:.06em;background:linear-gradient(180deg,#fff,#ffd978);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 2px 8px #000a)}
+  #msg::before{font-size:70px;line-height:1;filter:drop-shadow(0 4px 10px #000a);margin-bottom:-6px}
+  #msg.win::before{content:"🏆"}
+  #msg.lose::before{content:"💥"}
+  #msg.lose>span{background:linear-gradient(180deg,#fff,#ff9a9a);-webkit-background-clip:text;background-clip:text}
+  #msg button{min-width:0;min-height:50px;padding:0 22px;border-radius:999px;font-size:16px;font-weight:700;border:1px solid #ffffff30;background:#ffffff1a;color:#fff;backdrop-filter:blur(6px)}
+  #msg #next,#msg #retry.primary{background:linear-gradient(180deg,#ffe58f,#ffb21f);color:#3a2600;border-color:transparent}
   /* yatay (kısa) ekran: düğmeler biraz küçülür */
   @media (max-height:520px){
+    #menu{gap:10px}.brand h1{font-size:21px}.logo{width:56px;height:56px}.brand p{display:none}.level{padding:8px 12px}.chip{padding:8px 10px}
+    #skills{bottom:calc(max(10px,env(safe-area-inset-bottom)) + 108px);flex-direction:row;right:max(10px,env(safe-area-inset-right))}
+    #skills button{width:52px;min-width:52px;min-height:52px}
+    #skills small{display:none}
     #prod button{min-height:52px;min-width:56px}
     #prod small{display:none}
     #sel{bottom:calc(max(10px,env(safe-area-inset-bottom)) + 64px)}
     #sel button{min-height:42px}
-    #menu{font-size:16px;gap:10px}
-    #menu h1{font-size:22px}
-  }
+      }
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
 <div id="hud"></div><div id="seed" hidden></div>
+<div id="skills">
+  <button data-skill="sifa" title="Şifa: alandaki dostlara %30 can (Q)"><i></i><b>💚</b><small>Şifa</small></button>
+  <button data-skill="yagmur" title="Ok Yağmuru: alandaki düşmanlara hasar (W)"><i></i><b>☄️</b><small>Yağmur</small></button>
+  <button data-skill="hiz" title="Hız: alandaki dostlar hızlanır (E)"><i></i><b>⚡</b><small>Hız</small></button>
+</div>
 <div id="toast" hidden></div>
 <div id="sel" hidden><button id="stop">✋ Dur</button><button id="selclear" title="Seçimi bırak">✕</button></div>
 <div id="prod">
@@ -72,18 +131,22 @@
 <button id="mute">🔊</button>
 <div id="tut" hidden><span id="tut-n"></span><p id="tut-text"></p><button id="tut-skip">Atla</button></div>
 <div id="menu">
-  <h1>İzometrik Strateji</h1>
-  <div class="row tabs"><button data-tab="camp" class="on">Bölümler</button><button data-tab="quick">Hızlı oyun</button></div>
-  <div id="tab-camp"><div id="levels"></div></div>
-  <div id="tab-quick" hidden>
-    <div class="lbl">Zorluk</div>
-    <div class="row"><button data-diff="kolay">Kolay</button><button data-diff="normal">Normal</button><button data-diff="zor">Zor</button></div>
-    <div class="lbl">Rakip sayısı</div>
-    <div class="row"><button data-en="1">1</button><button data-en="2">2</button><button data-en="3">3</button></div>
-    <div class="lbl">Harita</div>
-    <div class="row"><button data-map="rand">🎲 Rastgele</button><button data-map="classic">Klasik</button></div>
-    <button id="play" class="big">Başla</button>
-  </div>
+  <header class="brand">
+    <img class="logo" src="icons/icon.svg" alt="">
+    <h1><span>İZOMETRİK</span>STRATEJİ</h1>
+    <p>Noktaları ele geçir, birliğini büyüt, rakiplerini ezip geç.</p>
+  </header>
+  <nav class="seg"><button data-tab="camp" class="on">⚔️ Bölümler</button><button data-tab="quick">🎲 Hızlı oyun</button></nav>
+  <section id="tab-camp"><div id="levels"></div></section>
+  <section id="tab-quick" hidden>
+    <div class="opt"><label>Zorluk</label>
+      <div class="chips"><button class="chip" data-diff="kolay"><b>🌱</b>Kolay</button><button class="chip" data-diff="normal"><b>⚔️</b>Normal</button><button class="chip" data-diff="zor"><b>🔥</b>Zor</button></div></div>
+    <div class="opt"><label>Rakip sayısı</label>
+      <div class="chips"><button class="chip" data-en="1"><b>👤</b>1 rakip</button><button class="chip" data-en="2"><b>👥</b>2 rakip</button><button class="chip" data-en="3"><b>👥👤</b>3 rakip</button></div></div>
+    <div class="opt"><label>Harita</label>
+      <div class="chips"><button class="chip" data-map="rand"><b>🎲</b>Rastgele</button><button class="chip" data-map="classic"><b>🧭</b>Klasik</button></div></div>
+    <button id="play" class="big">▶ BAŞLA</button>
+  </section>
 </div>
 <div id="msg" hidden><span></span><div class="row"><button id="next" hidden>Sonraki bölüm</button><button id="retry">Yeniden dene</button><button id="restart">Menü</button></div></div>
 <script type="module" src="src/main.js"></script>
