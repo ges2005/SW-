@@ -136,6 +136,8 @@ Kullanıcı isteği: 3 arkadaşla (toplam 4 kişi), **farklı ağlardan**, linkl
 
 - **Logo (kullanıcı isteği):** TONTON GAMES amblemi: elinde bıçak tutan, bize bakan tatlı bir yavru kedi (turuncu, iri parlak gözler, kaşsız; çizgi film tarzı, kansız). Kaynak `icons/icon.svg`; PNG'ler (192/512/maskable/apple-touch) ve Android başlatıcı simgeleri ile açılış ekranları bundan üretiliyor. iPhone'da ana ekran simgesi eklenirken okunur: yeni logoyu görmek için simgeyi silip yeniden eklemek gerekir.
 
+- **CI'da yakalanan test kırılganlığı:** kedi amblemi sürümünde Pages iş akışının e2e adımı bir testte düştü ("seçiliyken üsse dokunmak geri çekilmeyi başlatıyor") ve yayın (deploy) atlandı. Neden ürün hatası değil, testin zamanlamasıydı: birimler üsse 1,5 kare uzaktaydı, çekilme ~0,6 sn sürüyor ve yavaş CI'da test bakana kadar bitmişti. Düzeltme: birimler 5 kare uzağa konuyor (çekilme ~2,3 sn), varış `waitForFunction` ile bekleniyor. Üç paralel koşuyla yük altında doğrulandı. Not: test kapısı yayını bilerek engelliyor; testi atlamak yerine kök neden düzeltildi.
+
 ## Doğrulanmadı / açık işler
 - Gerçek telefonda dokunma hissi, performans (çok birimli savaşlar), ses.
 - Android APK derlemesi ve cihaza kurulumu; Pages yayını.
