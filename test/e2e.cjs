@@ -207,6 +207,12 @@ const ok = (c, m) => { if (!c) throw new Error('BAŞARISIZ: ' + m); console.log(
   ok(neutral.owner === -1 && spread(neutral.rgb) < 15 && neutral.rgb[0] > 150, `tarafsız nokta silik gri çiziliyor (rgb ${neutral.rgb})`);
   ok(owned.owner === 0 && owned.rgb[0] > 130 && owned.rgb[1] < 60 && owned.rgb[2] > 130, `ele geçirilen nokta takımın (mor) rengini alıyor (rgb ${owned.rgb})`);
 
+  // amblem: ele geçirilmiş (mor) noktada açık/beyaz görünür, tarafsızda silik (merkez çevresindeki 15x15 pikselde beyazımsı piksel sayısı)
+  const whitish = () => p.evaluate(id => { const { game, ui } = window.__game(); const pt = game.points[id]; const s = ui.project(pt.x, pt.y); const dpr = window.devicePixelRatio || 1; const d = document.getElementById('c').getContext('2d').getImageData(Math.round(s.x * dpr) - 7, Math.round(s.y * dpr) - 7, 15, 15).data; let n = 0; for (let i = 0; i < d.length; i += 4) if (Math.min(d[i], d[i + 1], d[i + 2]) > 235) n++; return n; }, pid);
+  ok((await whitish()) > 12, 'ele geçirilen noktadaki amblem açık (beyaz) renkte, mor üstünde seçiliyor');
+  await p.evaluate(id => { window.__game().game.points[id].owner = -1; }, pid); await wait(300);
+  ok((await whitish()) === 0, 'tarafsız noktadaki amblem silik (beyaz değil)');
+
   // iki parmak: kaydır + yakınlaştır
   const before = await p.evaluate(() => { const { cam } = window.__game(); return { x: cam.x, y: cam.y, z: cam.zoom }; });
   await touch('touchStart', [{ x: 150, y: 400 }, { x: 250, y: 400 }]);
