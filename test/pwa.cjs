@@ -23,6 +23,7 @@ const inter = (a, b) => a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y 
   await p.goto(url); await p.waitForTimeout(500);
   const man = await p.evaluate(async () => (await fetch(document.querySelector('link[rel=manifest]').href)).json());
   ok(man.name && man.short_name && man.start_url && ['standalone', 'fullscreen'].includes(man.display), 'manifest temel alanları var');
+  ok(man.name === 'TONTON GAMES' && man.short_name === 'TONTON GAMES', 'manifest adı TONTON GAMES');
   for (const sz of ['192x192', '512x512']) ok(man.icons.some(i => i.sizes === sz && i.type === 'image/png'), `manifest ${sz} PNG ikon içeriyor`);
   ok(man.icons.some(i => i.purpose === 'maskable'), 'maskable ikon var');
   for (const i of man.icons) ok(fs.existsSync(path.join(root, i.src)), `ikon dosyası var: ${i.src}`);

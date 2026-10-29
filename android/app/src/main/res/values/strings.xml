@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">İzometrik Strateji</string>
-    <string name="title_activity_main">İzometrik Strateji</string>
+    <string name="app_name">TONTON GAMES</string>
+    <string name="title_activity_main">TONTON GAMES</string>
     <string name="package_name">io.github.ges2005.strateji</string>
     <string name="custom_url_scheme">io.github.ges2005.strateji</string>
 </resources>

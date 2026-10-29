@@ -31,6 +31,7 @@ const ok = (c, m) => { if (!c) throw new Error('BAŞARISIZ: ' + m); console.log(
 
   await p.goto(url); await wait(400);
   ok(await p.isVisible('#menu'), 'menü açılışta görünüyor');
+  ok((await p.title()) === 'TONTON GAMES' && /TONTON\s*GAMES/.test(await p.textContent('.brand h1')), 'oyun adı TONTON GAMES (sayfa başlığı ve giriş ekranı)');
   ok(await p.locator('.level').count() === 6, '6 bölüm listeleniyor');
   ok(await p.locator('.level:disabled').count() === 5, 'yalnızca öğretici açık, diğerleri kilitli');
 

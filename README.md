@@ -1,4 +1,4 @@
-# SW-
+# TONTON GAMES
 
 İzometrik, mobil uyumlu, nokta ele geçirme odaklı bir strateji oyunu. Tarayıcıda çalışır, PWA olarak kurulabilir, Android APK olarak paketlenebilir.
 
