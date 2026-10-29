@@ -123,6 +123,8 @@ Kullanıcı isteği: 3 arkadaşla (toplam 4 kişi), **farklı ağlardan**, linkl
   - Efektler (yayılan dolgulu elips, ✚ parçacıkları, düşen oklar, hız çizgileri) ve sesler eklendi. Sim olayı: `skill`.
 - **Giriş ekranı yenilendi:** logo ve degrade başlık, hareketli izometrik desenli arka plan, cam efektli seviye kartları (numara/✓/🔒 rozeti, zorluk ve rakip sayısı etiketi), seçim çipleri (emojili), parlayan BAŞLA düğmesi, bitiş ekranında 🏆/💥. `prefers-reduced-motion` desteklenir.
 
+- **Amblem okunurluğu (iPhone geri bildirimi):** noktalardaki ♥ ♠ ♦ ♣ metin karakterleri iPhone'da emoji gibi çizilip rengini kaybedebildiği için mor zeminde zor görünüyordu. Artık vektör şekil olarak çiziliyor (`suitPath`/`drawSuit`, `src/iso.js`): ele geçirilmiş noktada **beyaz + koyu ince kenarlık**, tarafsızda silik gri. Kule amblemi kule gövdesinin üstünde. Piksel ölçümüyle test edildi.
+
 ## Doğrulanmadı / açık işler
 - Gerçek telefonda dokunma hissi, performans (çok birimli savaşlar), ses.
 - Android APK derlemesi ve cihaza kurulumu; Pages yayını.

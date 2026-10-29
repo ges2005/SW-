@@ -37,6 +37,31 @@ const poly = (ctx, pts, fill, stroke) => {
   if (stroke) { ctx.strokeStyle = stroke; ctx.stroke(); }
 };
 const diamond = (cam, i, j, r) => [[i - r, j - r], [i + r, j - r], [i + r, j + r], [i - r, j + r]].map(([a, b]) => toScreen(cam, a, b));
+// Sembolleri metin karakteri yerine yol olarak çizeriz: bazı cihazlar (özellikle iPhone) ♥ ♦ gibi karakterleri
+// renkli emoji gibi çizip fillStyle'ı yok sayar; vektör şekil her yerde aynı ve istenen renkte görünür.
+function suitPath(ctx, kind, u) {
+  ctx.beginPath();
+  if (kind === 'H') { // kalp
+    ctx.moveTo(0, u * 0.95); ctx.bezierCurveTo(-u * 1.5, u * 0.05, -u * 1.15, -u * 1.0, 0, -u * 0.35);
+    ctx.bezierCurveTo(u * 1.15, -u * 1.0, u * 1.5, u * 0.05, 0, u * 0.95);
+  } else if (kind === 'S') { // maça
+    ctx.moveTo(0, -u * 1.0); ctx.bezierCurveTo(-u * 1.5, -u * 0.05, -u * 1.15, u * 0.95, 0, u * 0.35);
+    ctx.bezierCurveTo(u * 1.15, u * 0.95, u * 1.5, -u * 0.05, 0, -u * 1.0);
+    ctx.moveTo(0, u * 0.1); ctx.lineTo(-u * 0.5, u * 1.05); ctx.lineTo(u * 0.5, u * 1.05); ctx.closePath();
+  } else if (kind === 'D') { // karo
+    ctx.moveTo(0, -u * 1.1); ctx.lineTo(u * 0.85, 0); ctx.lineTo(0, u * 1.1); ctx.lineTo(-u * 0.85, 0); ctx.closePath();
+  } else { // sinek
+    ctx.arc(0, -u * 0.5, u * 0.52, 0, 7); ctx.moveTo(-u * 0.05, u * 0.2); ctx.arc(-u * 0.62, u * 0.2, u * 0.52, 0, 7);
+    ctx.moveTo(u * 1.2, u * 0.2); ctx.arc(u * 0.62, u * 0.2, u * 0.52, 0, 7);
+    ctx.moveTo(0, u * 0.1); ctx.lineTo(-u * 0.42, u * 1.05); ctx.lineTo(u * 0.42, u * 1.05); ctx.closePath();
+  }
+}
+function drawSuit(ctx, kind, x, y, u, fill, stroke) {
+  ctx.save(); ctx.translate(x, y); suitPath(ctx, kind, u);
+  ctx.fillStyle = fill; ctx.fill();
+  if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = Math.max(1.5, u * 0.14); ctx.lineJoin = 'round'; ctx.stroke(); }
+  ctx.restore();
+}
 const mixHex = (a, b, t) => {
   const pa = [1, 3, 5].map(i => parseInt(a.slice(i, i + 2), 16)), pb = [1, 3, 5].map(i => parseInt(b.slice(i, i + 2), 16));
   return '#' + pa.map((v, i) => Math.round(v + (pb[i] - v) * t).toString(16).padStart(2, '0')).join('');
@@ -60,7 +85,7 @@ export function render(ctx, cam, g, ui) {
   }
 
   // noktalar: tarafsız = silik gri; ele geçirilince takımın rengi. Ele geçirme sürerken renk yavaşça geçiş yapar (bar yok).
-  const NEUTRAL = '#cdd2d6', GLYPH = { eko: null, demirci: '♦', kule: '♣', ana: null };
+  const NEUTRAL = '#cdd2d6';
   for (const p of g.points) {
     if (!isSeen(V, p.x, p.y)) continue;
     const own = ownerOf(p), live = isVisible(V, p.x, p.y);
@@ -70,16 +95,15 @@ export function render(ctx, cam, g, ui) {
     const r = p.base ? 1.1 : 0.8;
     poly(ctx, diamond(cam, p.x, p.y, r), tile, null);
     const s = toScreen(cam, p.x, p.y);
-    if (!p.base) {
-      const coloured = own >= 0 || (capturing && p.prog > 0.5);
-      ctx.fillStyle = coloured ? 'rgba(255,255,255,.92)' : '#a9b0b5'; ctx.font = `${30 * z}px sans-serif`;
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(GLYPH[p.kind] || (p.suit === 'S' ? '♠' : '♥'), s.x, s.y);
-    }
     if (p.kind === 'kule') { // kule gövdesi (sahibinin rengi)
       ctx.fillStyle = tile === NEUTRAL ? '#9aa2a8' : tile; ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.roundRect(s.x - 8 * z, s.y - 40 * z, 16 * z, 38 * z, 3 * z); ctx.fill(); ctx.stroke();
       ctx.fillRect(s.x - 11 * z, s.y - 46 * z, 22 * z, 7 * z);
+    }
+    if (!p.base) { // amblem: ele geçirilmiş noktada açık (beyaz) ve koyu kenarlıklı, tarafsızda silik
+      const coloured = own >= 0 || (capturing && p.prog > 0.5);
+      const kind = p.kind === 'demirci' ? 'D' : p.kind === 'kule' ? 'C' : (p.suit === 'S' ? 'S' : 'H');
+      drawSuit(ctx, kind, s.x, s.y + (p.kind === 'kule' ? 4 * z : 0), 11 * z, coloured ? '#ffffff' : '#aab1b6', coloured ? 'rgba(15,10,40,.55)' : null);
     }
   }
 
