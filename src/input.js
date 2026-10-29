@@ -5,7 +5,7 @@ import { commandMove } from './sim.js';
 //   birime dokun               -> seçime ekle / çıkar        (çift dokun: ekrandaki aynı türden hepsi)
 //   üssüne dokun               -> (seçim yokken) hepsini seç
 //   boş yere dokun             -> seçili birimleri gönder (saldır); emirden sonra seçim kendiliğinden bırakılır
-//   boş yere ÇİFT dokun        -> emri geri alır ve seçimi bırakır (yanlış seçtiysen)
+//   boş yere ÇİFT dokun        -> (600 ms içinde) emri geri alır ve seçimi bırakır (yanlış seçtiysen)
 //   boş yerde basılı tut       -> seçili birimler savaşmadan koşar (geri çekilme)
 //   birimden sürükle, bırak    -> o birimi (seçiliyse tüm seçimi) bırakılan yere gönder
 //   boş yerde sürükle          -> çerçeveyle seç
@@ -59,6 +59,7 @@ export function bindInput(canvas, cam, getGame, ui) {
   const undoOrder = () => { // son emri geri al
     for (const b of lastOrder.before) { b.u.tx = b.tx; b.u.ty = b.ty; b.u.mode = b.mode; b.u.hold = b.hold; }
     lastOrder = null; ui.selected.clear();
+    ui.toast = { text: '↩ Emir geri alındı, seçim bırakıldı', t: performance.now() };
   };
 
   function selectBox(b) {
@@ -87,7 +88,8 @@ export function bindInput(canvas, cam, getGame, ui) {
   function tapGround(p) {
     const now = performance.now();
     // boşa çift dokunma: az önceki emri geri alır, seçim bırakılmış kalır
-    if (lastOrder && now - lastOrder.t < 320 && Math.hypot(p.x - lastOrder.p.x, p.y - lastOrder.p.y) < 50) { undoOrder(); return; }
+    // (emirden sonra seçim bırakıldığı için yakın zamanda boşa ikinci dokunuş yalnızca geri alma anlamına gelir; geniş pencere güvenli)
+    if (lastOrder && now - lastOrder.t < 600 && Math.hypot(p.x - lastOrder.p.x, p.y - lastOrder.p.y) < 90) { undoOrder(); return; }
     if (ui.selected.size) { send([...ui.selected], p, 'attack'); return; }
     if (hitBase(p)) getGame().units.forEach(u => { if (u.team === 0) ui.selected.add(u.id); }); // üsse dokun = hepsini seç
   }
