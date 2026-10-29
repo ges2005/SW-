@@ -1,4 +1,4 @@
-# Proje Planı — İzometrik Strateji (tarayıcı, mobil öncelikli)
+# Proje Planı — TONTON GAMES (izometrik strateji, tarayıcı, mobil öncelikli)
 
 Karar: izometrik görünüm, tarayıcıda çalışan web oyunu, her aşamada telefon düşünülür.
 Bu oyun School Wars'ın kopyası değil; çekirdek mantığı (nokta ele geçirme → üretim/kapasite/buff → savaş) alıp çok daha gelişmiş bir oyuna dönüştürmek için bir temel.
@@ -131,6 +131,8 @@ Kullanıcı isteği: 3 arkadaşla (toplam 4 kişi), **farklı ağlardan**, linkl
   - **↩ Geri çekil** (`commandRetreat`): seçili birimler savaşı bırakıp en yakın **kendi** noktasına (yoksa üsse) savaşmadan koşar, varınca mevzi tutar (kovalamaz); yeni emir bekleme durumunu bozar. Seçim varken **üsse dokunmak** da aynı komut. Seçim bırakılır; iki parmak dokunuşu geri alabilir.
   - Tasarım kararı: normal dokunuş **saldır-hareket** olarak kaldı (savaştaki birim emri alsa da dövüşür, bilinçli). Savaştan kaçmak için ↩ Çekil / üsse dokunma / boşa basılı tutma kullanılır. Bu, kuralların öngörülebilir kalmasını sağlıyor.
   - Bilinen bedel: kaçan birim sırtından vurulabilir (rakip daha hızlı ya da okçuysa); eşit hızlı rakip yakalayamaz. Yapay zeka geri çekilmeyi kullanmıyor (önceki denemede yapay zekayı zayıflatmıştı).
+
+- **Oyun adı: TONTON GAMES** (sayfa başlığı, giriş ekranı, PWA adı/kısa adı, iOS ana ekran etiketi, Android uygulama adı). İç kimlikler bilerek değişmedi (Android paket kimliği `io.github.ges2005.strateji`, önbellek öneki, APK artifact adı): değişirse kurulu uygulamalar güncelleme olarak tanınmaz. **Not:** iPhone ana ekran etiketi simge eklenirken okunur; eski simge eski adı gösterir, yeni ad için silip yeniden eklemek gerekir.
 
 ## Doğrulanmadı / açık işler
 - Gerçek telefonda dokunma hissi, performans (çok birimli savaşlar), ses.
