@@ -123,12 +123,28 @@ const ok = (c, m) => { if (!c) throw new Error('BAŞARISIZ: ' + m); console.log(
   const run = await p.evaluate(() => { const { game, ui } = window.__game(); const u = game.units.filter(x => x.team === 0).find(x => x.tx !== null); return { mode: u && u.mode, used: ui.usedRun }; });
   ok(run.mode === 'move' && run.used && (await st()).sel === 0, 'boşta basılı tutmak birimleri koşturuyor (savaşmaz kipi) ve seçimi bırakıyor');
 
+  const empty = await tileXY(base.i - 4, base.j + 3);
+  // iki parmakla tek sefer dokunma = iptal (seçim bırakılır; seçim yoksa son emir geri alınır)
+  await freeze(); await wait(100);
+  const t1 = await unitXY(0);
+  await p.touchscreen.tap(t1.x, t1.y); await wait(450);
+  ok((await st()).sel === 1, 'birim seçildi (iki parmak iptali senaryosu)');
+  const camT = await p.evaluate(() => { const { cam } = window.__game(); return { x: cam.x, y: cam.y, z: cam.zoom }; });
+  await touch('touchStart', [{ x: 150, y: 300 }, { x: 230, y: 300 }]); await wait(80); await touch('touchEnd', []); await wait(600);
+  const afterTT = await p.evaluate(() => { const { cam, ui } = window.__game(); return { x: cam.x, y: cam.y, z: cam.zoom, sel: ui.selected.size, toast: ui.toast && ui.toast.text }; });
+  ok(afterTT.sel === 0 && afterTT.x === camT.x && afterTT.y === camT.y && afterTT.z === camT.z, 'iki parmakla tek dokunuş seçimi bırakıyor, haritayı kaydırmıyor/yakınlaştırmıyor');
+  // seçim yokken: son emri geri al
+  await p.touchscreen.tap(t1.x, t1.y); await wait(450);
+  await p.touchscreen.tap(empty.x, empty.y); await wait(500);
+  ok(await p.evaluate(() => window.__game().game.units.some(u => u.team === 0 && u.tx !== null)), 'emir verildi (geri alma senaryosu)');
+  await touch('touchStart', [{ x: 150, y: 300 }, { x: 230, y: 300 }]); await wait(80); await touch('touchEnd', []); await wait(600);
+  ok(await p.evaluate(() => !window.__game().game.units.some(u => u.team === 0 && u.tx !== null)), 'seçim yokken iki parmakla dokunuş son emri geri alıyor');
+
   // yanlış seçilen birim: boşa çift dokun -> emir geri alınır, seçim bırakılır
   await freeze(); await wait(100);
   const w = await unitXY(0);
   await p.touchscreen.tap(w.x, w.y); await wait(450);
   ok((await st()).sel === 1, 'birim seçildi (yanlış seçim senaryosu)');
-  const empty = await tileXY(base.i - 4, base.j + 3);
   await p.touchscreen.tap(empty.x, empty.y); await wait(90); await p.touchscreen.tap(empty.x, empty.y); await wait(500);
   const dbl = await p.evaluate(() => { const { game, ui } = window.__game(); return { sel: ui.selected.size, moving: game.units.filter(u => u.team === 0 && u.tx !== null).length }; });
   ok(dbl.sel === 0 && dbl.moving === 0, 'boşa çift dokunmak seçimi bırakıyor ve birimi hiçbir yere göndermiyor');

@@ -93,7 +93,8 @@ Mantık ayrı olduğu için çizim/girdi değişse (başka kamera, yeni ekran) m
 - **Seçim ve nokta görünümü (kullanıcı isteği):**
   - Nokta üstündeki ele geçirme barı kaldırıldı. Tarafsız nokta **silik gri**, ele geçirilince **takımın rengi** (beyaz sembol); ele geçirme sürerken karo rengi gri→takım rengi yavaşça geçiş yapar. Piksel ölçümüyle test edildi.
   - **Emirden sonra seçim kendiliğinden bırakılır** (saldır, ok ile gönder, basılı tutup koş). Başka birine dokununca önceki emir bozulmaz. Tüm kendi birimlerinin yolu (kesik çizgi + hedef) seçili olmasa da görünür.
-  - **Boşa çift dokunma = emri geri al + seçimi bırak** (yanlış seçildiyse). İlk dokunuş emri verir ve önceki durumu saklar, ikincisi (600 ms, 90 px içinde) eski durumu geri yükler ve "Emir geri alındı" mesajı gösterir. (İlk sürümde pencere 320 ms idi; gerçek iPhone denemesinde çift dokunma çoğu zaman daha yavaş çıktığı için genişletildi.)
+  - **İki parmakla tek sefer dokunma = iptal** (zamanlama gerektirmez): seçim varsa bırakır, yoksa son emri (5 sn içinde) geri alır. Kayma/yakınlaşma olmayan, 350 ms'den kısa iki parmak dokunuşu sayılır; kaydırma/yakınlaştırma ile karışmaz.
+  - **Boşa çift dokunma (tek parmak, art arda iki kez) = emri geri al + seçimi bırak** (yanlış seçildiyse). İlk dokunuş emri verir ve önceki durumu saklar, ikincisi (600 ms, 90 px içinde) eski durumu geri yükler ve "Emir geri alındı" mesajı gösterir. (İlk sürümde pencere 320 ms idi; gerçek iPhone denemesinde çift dokunma çoğu zaman daha yavaş çıktığı için genişletildi.)
   - ✋ Dur artık seçimle çalıştığı için, durdurmak istenen birimler önce seçilir (üsse dokun = hepsi).
 
 ## Gelecek gereksinim: 4 kişilik çevrimiçi oyun (şimdilik yapılmıyor, taslak aşama)

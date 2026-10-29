@@ -5,7 +5,8 @@ import { commandMove } from './sim.js';
 //   birime dokun               -> seçime ekle / çıkar        (çift dokun: ekrandaki aynı türden hepsi)
 //   üssüne dokun               -> (seçim yokken) hepsini seç
 //   boş yere dokun             -> seçili birimleri gönder (saldır); emirden sonra seçim kendiliğinden bırakılır
-//   boş yere ÇİFT dokun        -> (600 ms içinde) emri geri alır ve seçimi bırakır (yanlış seçtiysen)
+//   İKİ PARMAKLA tek dokunuş   -> seçimi bırakır; seçim yoksa son emri (5 sn içinde) geri alır
+//   boş yere ÇİFT dokun (tek parmak, art arda) -> (600 ms içinde) emri geri alır ve seçimi bırakır
 //   boş yerde basılı tut       -> seçili birimler savaşmadan koşar (geri çekilme)
 //   birimden sürükle, bırak    -> o birimi (seçiliyse tüm seçimi) bırakılan yere gönder
 //   boş yerde sürükle          -> çerçeveyle seç
@@ -94,6 +95,12 @@ export function bindInput(canvas, cam, getGame, ui) {
     if (hitBase(p)) getGame().units.forEach(u => { if (u.team === 0) ui.selected.add(u.id); }); // üsse dokun = hepsini seç
   }
 
+  // İki parmakla tek dokunuş: seçim varsa bırakır; yoksa az önceki emri (5 sn içinde) geri alır.
+  function twoFingerTap() {
+    if (ui.selected.size) { ui.selected.clear(); ui.toast = { text: 'Seçim bırakıldı', t: performance.now() }; }
+    else if (lastOrder && performance.now() - lastOrder.t < 5000) undoOrder();
+  }
+
   const mid = () => { const [a, b] = [...ptrs.values()]; return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, d: Math.hypot(a.x - b.x, a.y - b.y) }; };
 
   canvas.addEventListener('pointerdown', e => {
@@ -101,7 +108,7 @@ export function bindInput(canvas, cam, getGame, ui) {
     const p = pos(e); ptrs.set(e.pointerId, p);
     if (ptrs.size === 2) {
       clearTimeout(holdTimer); drag = null; ui.box = null; ui.arrow = null;
-      const m = mid(); pinch = { d: m.d, z: cam.zoom, mx: m.x, my: m.y };
+      const m = mid(); pinch = { d: m.d, z: cam.zoom, mx: m.x, my: m.y, d0: m.d, mx0: m.x, my0: m.y, t0: performance.now(), moved: false };
       return;
     }
     if (e.pointerType === 'mouse' && e.button === 2) { drag = { mode: 'pan', last: p }; return; }
@@ -122,6 +129,7 @@ export function bindInput(canvas, cam, getGame, ui) {
       const m = mid();
       cam.x -= (m.x - pinch.mx) / cam.zoom; cam.y -= (m.y - pinch.my) / cam.zoom;
       cam.zoom = pinch.z * m.d / pinch.d; pinch.mx = m.x; pinch.my = m.y;
+      if (Math.abs(m.d - pinch.d0) > 14 || Math.hypot(m.x - pinch.mx0, m.y - pinch.my0) > 16) pinch.moved = true;
       clampCam(cam); ui.camMoved = true; return;
     }
     if (!drag) return;
@@ -141,7 +149,13 @@ export function bindInput(canvas, cam, getGame, ui) {
   const end = e => {
     const had = ptrs.delete(e.pointerId);
     clearTimeout(holdTimer);
-    if (pinch) { if (ptrs.size < 2) pinch = null; drag = null; return; }
+    if (pinch) {
+      if (ptrs.size < 2) { // iki parmakla tek sefer dokunma (kayma/yakınlaşma yok) = iptal
+        if (!pinch.moved && performance.now() - pinch.t0 < 350) twoFingerTap();
+        pinch = null;
+      }
+      drag = null; return;
+    }
     if (!had || !drag) return;
     if (drag.mode === 'wait') tapGround(drag.last);
     else if (drag.mode === 'unit') tapUnit(drag.unit);
