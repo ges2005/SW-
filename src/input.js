@@ -4,14 +4,15 @@ import { commandMove } from './sim.js';
 // Dokunmatik öncelikli kontrol (fare ile de aynı):
 //   birime dokun               -> seçime ekle / çıkar        (çift dokun: ekrandaki aynı türden hepsi)
 //   üssüne dokun               -> (seçim yokken) hepsini seç
-//   boş yere dokun             -> seçili birimleri gönder (saldır)
+//   boş yere dokun             -> seçili birimleri gönder (saldır); emirden sonra seçim kendiliğinden bırakılır
+//   boş yere ÇİFT dokun        -> emri geri alır ve seçimi bırakır (yanlış seçtiysen)
 //   boş yerde basılı tut       -> seçili birimler savaşmadan koşar (geri çekilme)
 //   birimden sürükle, bırak    -> o birimi (seçiliyse tüm seçimi) bırakılan yere gönder
 //   boş yerde sürükle          -> çerçeveyle seç
 //   iki parmak                 -> kaydır + yakınlaştır   (fare: sağ tuşla sürükle, tekerlek)
 export function bindInput(canvas, cam, getGame, ui) {
   const ptrs = new Map();
-  let drag = null, pinch = null, holdTimer = null, lastTap = { id: -1, t: 0 };
+  let drag = null, pinch = null, holdTimer = null, lastTap = { id: -1, t: 0 }, lastOrder = null;
   const MOVE = 10, HOLD = 380;
 
   // Dokunma noktasını tuvalin çizim koordinatlarına çevirir (CSS boyutu çizim boyutundan farklı olsa da doğru kalır).
@@ -46,10 +47,18 @@ export function bindInput(canvas, cam, getGame, ui) {
     return Math.hypot(t.i - b.x, t.j - b.y) < 1.4;
   }
 
+  // Emir verir ve seçimi bırakır (başka birine dokununca önceki emir bozulmasın). Geri almak için önceki durumu saklar.
   const send = (ids, p, mode) => {
-    const t = tileAt(p);
-    commandMove(getGame(), ids, t.x, t.y, mode);
+    const g = getGame(), t = tileAt(p);
+    const before = g.units.filter(u => ids.includes(u.id)).map(u => ({ u, tx: u.tx, ty: u.ty, mode: u.mode, hold: u.hold }));
+    commandMove(g, ids, t.x, t.y, mode);
     ui.pings.push({ x: t.x, y: t.y, mode });
+    ui.selected.clear();
+    lastOrder = { t: performance.now(), p, before };
+  };
+  const undoOrder = () => { // son emri geri al
+    for (const b of lastOrder.before) { b.u.tx = b.tx; b.u.ty = b.ty; b.u.mode = b.mode; b.u.hold = b.hold; }
+    lastOrder = null; ui.selected.clear();
   };
 
   function selectBox(b) {
@@ -76,6 +85,9 @@ export function bindInput(canvas, cam, getGame, ui) {
   }
 
   function tapGround(p) {
+    const now = performance.now();
+    // boşa çift dokunma: az önceki emri geri alır, seçim bırakılmış kalır
+    if (lastOrder && now - lastOrder.t < 320 && Math.hypot(p.x - lastOrder.p.x, p.y - lastOrder.p.y) < 50) { undoOrder(); return; }
     if (ui.selected.size) { send([...ui.selected], p, 'attack'); return; }
     if (hitBase(p)) getGame().units.forEach(u => { if (u.team === 0) ui.selected.add(u.id); }); // üsse dokun = hepsini seç
   }

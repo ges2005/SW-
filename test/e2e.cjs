@@ -95,11 +95,15 @@ const ok = (c, m) => { if (!c) throw new Error('BAŞARISIZ: ' + m); console.log(
   await p.touchscreen.tap(gxy.x, gxy.y); await wait(200);
   const got = await p.evaluate(() => { const u = window.__game().game.units.find(x => x.team === 0 && x.tx !== null); return u && { tx: u.tx, ty: u.ty, mode: u.mode }; });
   ok(got && Math.hypot(got.tx - goal.i, got.ty - goal.j) < 0.7 && got.mode === 'attack', 'seçiliyken dokunulan yere saldır-hareketiyle gidiyor (tuval ölçüsü kaysa bile)');
+  ok((await st()).sel === 0, 'emir verilince seçim kendiliğinden bırakılıyor');
   await p.evaluate(() => { document.getElementById('c').style.height = ''; }); await wait(300);
   await p.evaluate(() => { const { cam } = window.__game(); cam.zoom = 1.3; window.dispatchEvent(new Event('resize')); }); await wait(150);
   ok((await p.evaluate(() => window.__game().cam.zoom)) === 1.3, 'yeniden boyutlandırma yakınlaştırmayı sıfırlamıyor');
 
-  // ✋ Dur
+  // ✋ Dur (önce üsse dokunup hepsini seç)
+  await p.evaluate(() => { window.__game().cam.zoom = 0.7; }); await wait(100);
+  const bxy2 = await tileXY(base.i + 0.4, base.j - 0.9);
+  await p.touchscreen.tap(bxy2.x, bxy2.y); await wait(450);
   await p.tap('#stop'); await wait(150);
   ok(await p.evaluate(() => (() => { const { game, ui } = window.__game(); const sel = game.units.filter(u => ui.selected.has(u.id)); return sel.length > 0 && sel.every(u => u.tx === null && u.hold); })()), '✋ Dur hedefi iptal edip mevzi tutturuyor');
 
@@ -109,7 +113,7 @@ const ok = (c, m) => { if (!c) throw new Error('BAŞARISIZ: ' + m); console.log(
   const gx = await tileXY(base.i - 4, base.j + 3);
   await swipe(a2, gx);
   const arr = await p.evaluate(() => { const { game, ui } = window.__game(); const us = game.units.filter(u => u.team === 0); return { moving: us.filter(u => u.tx !== null).length, sel: ui.selected.size, t: us[0].tx }; });
-  ok(arr.moving === 1 && arr.sel === 1 && arr.t !== null, 'birimden sürükleyip bırakmak yalnızca o birimi gönderiyor');
+  ok(arr.moving === 1 && arr.sel === 0 && arr.t !== null, 'birimden sürükleyip bırakmak yalnızca o birimi gönderiyor ve seçimi bırakıyor');
 
   // boşta basılı tut = koş (savaşmaz)
   await freeze(); await wait(100);
@@ -117,7 +121,27 @@ const ok = (c, m) => { if (!c) throw new Error('BAŞARISIZ: ' + m); console.log(
   const far = await tileXY(base.i - 4, base.j + 3);
   await touch('touchStart', [far]); await wait(600); await touch('touchEnd', []); await wait(600);
   const run = await p.evaluate(() => { const { game, ui } = window.__game(); const u = game.units.filter(x => x.team === 0).find(x => x.tx !== null); return { mode: u && u.mode, used: ui.usedRun }; });
-  ok(run.mode === 'move' && run.used, 'boşta basılı tutmak birimleri koşturuyor (savaşmaz kipi)');
+  ok(run.mode === 'move' && run.used && (await st()).sel === 0, 'boşta basılı tutmak birimleri koşturuyor (savaşmaz kipi) ve seçimi bırakıyor');
+
+  // yanlış seçilen birim: boşa çift dokun -> emir geri alınır, seçim bırakılır
+  await freeze(); await wait(100);
+  const w = await unitXY(0);
+  await p.touchscreen.tap(w.x, w.y); await wait(450);
+  ok((await st()).sel === 1, 'birim seçildi (yanlış seçim senaryosu)');
+  const empty = await tileXY(base.i - 4, base.j + 3);
+  await p.touchscreen.tap(empty.x, empty.y); await wait(90); await p.touchscreen.tap(empty.x, empty.y); await wait(500);
+  const dbl = await p.evaluate(() => { const { game, ui } = window.__game(); return { sel: ui.selected.size, moving: game.units.filter(u => u.team === 0 && u.tx !== null).length }; });
+  ok(dbl.sel === 0 && dbl.moving === 0, 'boşa çift dokunmak seçimi bırakıyor ve birimi hiçbir yere göndermiyor');
+
+  // nokta renkleri: tarafsız silik gri, ele geçirilince takımın rengi (çizilen piksellerden ölçülür)
+  await freeze(); await wait(100);
+  const px = () => p.evaluate(() => { const { game, ui, cam } = window.__game(); const dpr = window.devicePixelRatio || 1; const pt = game.points.find(q => !q.base && q.kind === 'eko' && Math.hypot(q.x - game.points.find(b => b.base && b.team === 0).x, q.y - game.points.find(b => b.base && b.team === 0).y) < 6); const s = ui.project(pt.x, pt.y); const d = document.getElementById('c').getContext('2d').getImageData(Math.round((s.x + 16) * dpr), Math.round(s.y * dpr), 1, 1).data; return { id: pt.id, rgb: [d[0], d[1], d[2]], owner: pt.owner }; });
+  const neutral = await px();
+  await p.evaluate(id => { window.__game().game.points[id].owner = 0; }, neutral.id); await wait(300);
+  const owned = await px();
+  const spread = c => Math.max(...c) - Math.min(...c);
+  ok(neutral.owner === -1 && spread(neutral.rgb) < 15 && neutral.rgb[0] > 150, `tarafsız nokta silik gri çiziliyor (rgb ${neutral.rgb})`);
+  ok(owned.owner === 0 && owned.rgb[0] > 130 && owned.rgb[1] < 60 && owned.rgb[2] > 130, `ele geçirilen nokta takımın (mor) rengini alıyor (rgb ${owned.rgb})`);
 
   // iki parmak: kaydır + yakınlaştır
   const before = await p.evaluate(() => { const { cam } = window.__game(); return { x: cam.x, y: cam.y, z: cam.zoom }; });

@@ -4,7 +4,7 @@ import { ownedCount } from './sim.js';
 export function createTutorial(game, cam, ui) {
   const steps = [
     { text: 'Bir birime dokun: seçilir. Art arda dokunarak ekleyebilir, ya da boş yerde parmağını sürükleyip çerçeveyle birçoğunu seçebilirsin. Üssüne dokunursan hepsi seçilir.', done: () => ui.selected.size > 0 },
-    { text: 'Seçiliyken haritaya dokun: birimler oraya gider. Hızlısı: bir birime dokunup parmağını sürükle ve bırak, ok çizer gibi gönderir.', done: () => game.units.some(u => u.team === 0 && u.tx !== null) },
+    { text: 'Seçiliyken haritaya dokun: birimler oraya gider ve seçim kendiliğinden bırakılır. Hızlısı: bir birime dokunup parmağını sürükle ve bırak. Yanlış birimi seçtiysen boş yere çift dokun: seçim bırakılır.', done: () => game.units.some(u => u.team === 0 && u.tx !== null) },
     { text: 'Birimler bir noktada beklerse orayı ele geçirir. Daha çok nokta = daha hızlı üretim, daha çok kapasite, daha güçlü birim. Bir nokta ele geçir.', done: () => ownedCount(game, 0) >= 2 },
     { text: 'Üretilecek türü sol alttaki kartlardan seç: ⚔️ 🏹 🛡️. Piyon okçuyu, okçu zırhlıyı, zırhlı piyonu yener. Birini değiştir.', done: () => game.teams[0].prod !== 'piyon' },
     { text: 'Haritayı iki parmakla kaydır ve yakınlaştır. Köşedeki mini haritaya dokunarak da gidebilirsin.', done: () => ui.camMoved },

@@ -90,6 +90,12 @@ Mantık ayrı olduğu için çizim/girdi değişse (başka kamera, yeni ekran) m
   - kaldırılanlar: Hepsi, İptal/Bırak, Üs, Kutu, Saldır/Yürü kipi, grup düğmeleri (klavye kısayolları 1-3, S, Esc duruyor)
   - Bilinen bedel: tek parmakla kaydırma yok. Harita küçük olduğu için sorun olmaması bekleniyor, cihazda doğrulanmadı.
 
+- **Seçim ve nokta görünümü (kullanıcı isteği):**
+  - Nokta üstündeki ele geçirme barı kaldırıldı. Tarafsız nokta **silik gri**, ele geçirilince **takımın rengi** (beyaz sembol); ele geçirme sürerken karo rengi gri→takım rengi yavaşça geçiş yapar. Piksel ölçümüyle test edildi.
+  - **Emirden sonra seçim kendiliğinden bırakılır** (saldır, ok ile gönder, basılı tutup koş). Başka birine dokununca önceki emir bozulmaz. Tüm kendi birimlerinin yolu (kesik çizgi + hedef) seçili olmasa da görünür.
+  - **Boşa çift dokunma = emri geri al + seçimi bırak** (yanlış seçildiyse). İlk dokunuş emri verir ve önceki durumu saklar, ikincisi (320 ms, 50 px içinde) eski durumu geri yükler.
+  - ✋ Dur artık seçimle çalıştığı için, durdurmak istenen birimler önce seçilir (üsse dokun = hepsi).
+
 ## Doğrulanmadı / açık işler
 - Gerçek telefonda dokunma hissi, performans (çok birimli savaşlar), ses.
 - Android APK derlemesi ve cihaza kurulumu; Pages yayını.
