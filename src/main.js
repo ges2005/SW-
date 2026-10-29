@@ -20,7 +20,7 @@ try { const d = localStorage.getItem('sw-diff'); if (d in DIFFICULTY) diff = d; 
 const cam = { x: 0, y: 0, zoom: 1, w: 0, h: 0 };
 const fx = createFx();
 const vision = createVision();
-const ui = { selected: new Set(), box: null, arrow: null, pings: [], camMoved: false, usedRun: false, time: 0, groups: [[], [], []], fx, vision, project: (i, j) => toScreen(cam, i, j) };
+const ui = { selected: new Set(), toast: null, box: null, arrow: null, pings: [], camMoved: false, usedRun: false, time: 0, groups: [[], [], []], fx, vision, project: (i, j) => toScreen(cam, i, j) };
 
 // Çizim boyutu, tuvalin gerçek (CSS) boyutundan alınır; böylece iPhone Safari'de adres çubuğu açılıp kapanınca
 // çizim ile dokunma koordinatları kaymaz. Yakınlaştırma yeniden boyutlandırmada sıfırlanmaz.
@@ -123,6 +123,7 @@ function frame(now) {
   for (const id of [...ui.selected]) if (!game.units.some(u => u.id === id)) ui.selected.delete(id);
   render(ctx, cam, game, ui);
   const t = 0; showProd();
+  const tt = document.getElementById('toast'); tt.hidden = !(ui.toast && performance.now() - ui.toast.t < 1400); if (!tt.hidden) tt.textContent = ui.toast.text;
   selBar.hidden = ui.selected.size === 0; selClear.textContent = `✕ ${ui.selected.size}`;
   for (const pg of ui.pings.splice(0)) fx.add({ type: 'ping', ...pg });
   hud.textContent = `Nokta ${ownedCount(game, t)} · Birim ${unitCount(game, t)}/${capacity(game, t)} · Üretim ${(spawnInterval(game, t) * CFG.types[game.teams[0].prod].cost).toFixed(1)}sn · Güç x${buff(game, t).toFixed(2)}`;

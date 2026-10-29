@@ -132,6 +132,20 @@ const ok = (c, m) => { if (!c) throw new Error('BAŞARISIZ: ' + m); console.log(
   await p.touchscreen.tap(empty.x, empty.y); await wait(90); await p.touchscreen.tap(empty.x, empty.y); await wait(500);
   const dbl = await p.evaluate(() => { const { game, ui } = window.__game(); return { sel: ui.selected.size, moving: game.units.filter(u => u.team === 0 && u.tx !== null).length }; });
   ok(dbl.sel === 0 && dbl.moving === 0, 'boşa çift dokunmak seçimi bırakıyor ve birimi hiçbir yere göndermiyor');
+  // gerçek insan ritmi: iki dokunuş arası 250-500 ms, ikinci dokunuş birkaç piksel kayık
+  for (const gap of [250, 400, 500]) {
+    await freeze(); await wait(100);
+    const w2 = await unitXY(0);
+    await p.touchscreen.tap(w2.x, w2.y); await wait(450);
+    await p.touchscreen.tap(empty.x, empty.y); await wait(gap); await p.touchscreen.tap(empty.x + 14, empty.y + 9); await wait(300);
+    const r2 = await p.evaluate(() => { const { game, ui } = window.__game(); return { sel: ui.selected.size, moving: game.units.filter(u => u.team === 0 && u.tx !== null).length, toast: !document.getElementById('toast').hidden }; });
+    ok(r2.sel === 0 && r2.moving === 0 && r2.toast, `çift dokunma ${gap} ms aralıkla da emri geri alıyor ve "geri alındı" mesajı çıkıyor`);
+  }
+  // bilinçli iki ayrı emir (aralarında yeniden seçim var) geri alınmamalı
+  await freeze(); await wait(100);
+  const w3 = await unitXY(0);
+  await p.touchscreen.tap(w3.x, w3.y); await wait(450); await p.touchscreen.tap(empty.x, empty.y); await wait(900);
+  ok(await p.evaluate(() => window.__game().game.units.some(u => u.team === 0 && u.tx !== null)), 'yavaş ikinci dokunuş (900 ms) emri geri almıyor');
 
   // nokta renkleri: tarafsız silik gri, ele geçirilince takımın rengi (çizilen piksellerden ölçülür)
   await freeze(); await wait(100);

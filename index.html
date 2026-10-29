@@ -24,6 +24,8 @@
   #prod small{font-size:11px;opacity:.7}
   #sel{position:fixed;left:max(10px,env(safe-area-inset-left));bottom:calc(max(10px,env(safe-area-inset-bottom)) + 76px);display:flex;gap:8px}
   #sel[hidden]{display:none}
+  #toast{position:fixed;left:50%;top:38%;transform:translateX(-50%);background:#000b;color:#fff;padding:10px 16px;border-radius:12px;font-size:15px;pointer-events:none;z-index:3;white-space:nowrap}
+  #toast[hidden]{display:none}
   #sel button{min-height:48px;min-width:64px;background:#ffd24a;font-size:16px}
   button.on{background:#ffd24a;outline:3px solid #fff}
   #mute{position:fixed;top:calc(max(8px,env(safe-area-inset-top)) + 46px);right:8px;min-width:48px}
@@ -60,6 +62,7 @@
 <body>
 <canvas id="c"></canvas>
 <div id="hud"></div><div id="seed" hidden></div>
+<div id="toast" hidden></div>
 <div id="sel" hidden><button id="stop">✋ Dur</button><button id="selclear" title="Seçimi bırak">✕</button></div>
 <div id="prod">
   <button data-prod="piyon" title="Piyon"><b>⚔️</b><small>Piyon</small></button>
