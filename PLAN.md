@@ -96,6 +96,23 @@ Mantık ayrı olduğu için çizim/girdi değişse (başka kamera, yeni ekran) m
   - **Boşa çift dokunma = emri geri al + seçimi bırak** (yanlış seçildiyse). İlk dokunuş emri verir ve önceki durumu saklar, ikincisi (320 ms, 50 px içinde) eski durumu geri yükler.
   - ✋ Dur artık seçimle çalıştığı için, durdurmak istenen birimler önce seçilir (üsse dokun = hepsi).
 
+## Gelecek gereksinim: 4 kişilik çevrimiçi oyun (şimdilik yapılmıyor, taslak aşama)
+Kullanıcı isteği: 3 arkadaşla (toplam 4 kişi), **farklı ağlardan**, linkle bağlanıp oynayabilmek. Oyun henüz taslak olduğu için şimdi yapılmıyor; ileride sorun yaşamamak için kararlar ve kod kuralları burada.
+
+**Seçilen yaklaşım (henüz kodlanmadı):**
+- **Kurucu otoriter (host-authoritative):** oyun bir oyuncunun cihazında çalışır, diğerleri yalnızca komut gönderir ve durum görüntüsü (snapshot, ~8-10 Hz) alır. Cihazlar arası aynı sonucu üretme (deterministik) garantisi aranmaz; JS motorları arasında `Math.cos/hypot` sonuçları birebir aynı olmayabilir (iPhone WebKit ↔ Android/PC V8), bu yüzden "herkes kendi simülasyonunu çalıştırsın" yaklaşımı **seçilmedi**.
+- **Bağlantı:** WebRTC (PeerJS bulut sinyali + herkese açık STUN), oda kodu/link ile katılım. Ücretsiz, hesap gerektirmez. Boş köşelere yapay zeka oturur. Mod: herkes herkese karşı (ittifak yok).
+- **Sis sunucu tarafında uygulanır:** her misafire yalnızca kendi görüşündeki düşman birimler gönderilir (hem bant genişliğini azaltır hem harita hilesini önler).
+- İstemci, iki snapshot arasını yumuşatarak (interpolasyon) çizer. Misafirin komutları (`move`, `stop`, `prod`, geri alma) kurucuda **sahiplik doğrulamasıyla** uygulanır.
+
+**Bilinen riskler:** (1) Farklı ağlarda doğrudan bağlantı (NAT) bazı mobil operatörlerde kurulamayabilir; garanti için TURN/aktarma sunucusu gerekir (ücretli ya da ayrı hesap). (2) Kurucu çıkar ya da iPhone'da uygulama arka plana atılırsa oyun herkes için durur. (3) Bu geliştirme ortamında `0.peerjs.com` ve STUN sunucularına erişim yok; sinyal/bağlantı burada test edilemez, yerel sinyal sunucusu ve cihazlarda deneme gerekir.
+
+**Şimdiden uyulacak kod kuralları (ileride iş azalsın):**
+- Mantık (`sim.js`) saf kalsın; çizim ve girdiden bağımsız. Yeni oyun kuralları yalnızca `sim.js`'e.
+- **Yeni kodda "oyuncu = 0 numaralı takım" varsayımı kullanma**; `myTeam` gibi bir değişken geçir. Şu an bu varsayım şu dosyalarda sabit ve çok oyunculu için `myTeam`e çevrilecek: `src/main.js` (HUD, görüş, bitiş), `src/input.js` (dokunma hedefi, üs seçimi), `src/iso.js` (yol çizgileri, mini harita rengi), `src/tutorial.js`, `src/sim.js` (`eliminate` içindeki "0 elenince kayıp" kuralı; çok oyunculuda kazanan takım numarası döndürülmeli, kayıp/kazanç arayüzde `myTeam`e göre belirlenmeli) ve e2e testleri.
+- Komutlar tek bir yerden geçsin (şu an `commandMove`/`commandStop` doğrudan çağrılıyor); ileride ağ üzerinden gönderilecek bir "komut" arayüzüne çevrilecek.
+- Simülasyon dışında rastgelelik (`Math.random`) yalnızca yapay zekada kalsın (yalnızca kurucu çalıştırır).
+
 ## Doğrulanmadı / açık işler
 - Gerçek telefonda dokunma hissi, performans (çok birimli savaşlar), ses.
 - Android APK derlemesi ve cihaza kurulumu; Pages yayını.
