@@ -39,12 +39,12 @@ Mantık ayrı olduğu için çizim/girdi değişse (başka kamera, yeni ekran) m
 - **Aşama 2b — Sis ve görüş (`src/vision.js`):** her birimin görüş menzili türe bağlı (okçu 6, piyon 5, zırhlı 4), sahip olunan noktalar 5, ana nokta 7 kare görüyor. Üç durum: keşfedilmemiş (koyu), görülmüş ama şu an görünmeyen (yarı soluk, noktalar son bilinen sahibiyle çizilir), görünen. Sisteki düşman birimleri, vuruş efektleri ve sesleri oyuncuya sızmaz. Mini harita da aynı sisi uygular. `CFG.fog.enabled` ile kapatılabilir.
   - Bilinen sınır: yapay zeka takımları sisten etkilenmiyor (tüm haritayı görüyor). Zorluk seviyeleri aşamasında kendi görüşleriyle sınırlanacak.
 
-- **Aşama 3 — Komutlar:**
-  - Kipler (sağdaki buton): **⚔️ Saldır** (varsayılan; yolda gördüğü düşmanı kovalar, sonra yoluna devam eder) ve **🏃 Yürü** (düşmanı yok sayıp koşar, geri çekilme için).
+- **Aşama 3 — Komutlar (düğmeleri sonradan harekete çevrildi, aşağıdaki "Dokunmatik-öncelikli kontrol" maddesine bak):**
+  - Kipler (önceden sağdaki buton, şimdi dokun=saldır / basılı tut=koş): **⚔️ Saldır** (varsayılan; yolda gördüğü düşmanı kovalar, sonra yoluna devam eder) ve **🏃 Yürü** (düşmanı yok sayıp koşar, geri çekilme için).
   - **✋ Dur:** hedefi iptal eder, mevzi tutar (yalnızca menzildeki düşmana vurur, kovalamaz).
-  - **Gruplar 1-3:** boş gruba dokun = seçimi kaydet, dolu gruba dokun = seç, basılı tut = üzerine yaz. Düğmede grup boyutu görünür.
+  - **Gruplar 1-3:** yalnızca klavye kısayoluyla (Ctrl+1-3 kaydet, 1-3 seç); düğmeler kaldırıldı.
   - **Çift dokunma:** bir birime iki kez dokununca ekrandaki aynı türden tüm birimler seçilir.
-  - Masaüstü bonusu (isteğe bağlı): 1-3 seç, Ctrl+1-3 kaydet, S dur, A kip değiştir. Oyun yalnızca sol tıkla da tam oynanır.
+  - Masaüstü bonusu (isteğe bağlı): 1-3 seç, Ctrl+1-3 kaydet, S dur, Esc seçimi bırak, ok tuşları kaydır, sağ tuşla sürükle kaydır.
 
 - **Aşama 4 — Yapay zeka (`src/ai.js`):**
   - Açılışta zorluk menüsü (Kolay / Normal / Zor, seçim hatırlanır).
@@ -80,6 +80,15 @@ Mantık ayrı olduğu için çizim/girdi değişse (başka kamera, yeni ekran) m
   2. *Seçimi bırakamıyordu:* "İptal" düğmesi "✕ Bırak" oldu ve seçim varken sarıya dönüyor; seçili birime tekrar dokunmak da seçimi kaldırıyor.
   3. *Çoklu seçim zordu:* yeni **▭ Kutu** kipi: açıkken tek parmakla sürükleyip çerçeve çizilir, birime dokunmak seçime ekler/çıkarır. İki parmakla hem yakınlaştırma hem kaydırma. Basılı tutma süresi 350→300 ms. Öğretici metni güncellendi.
   Testler: `test/e2e.cjs` bu üç senaryoyu (ölçü kayması, bırakma, kutu/ekleme) gerçek dokunma olaylarıyla sınıyor.
+
+- **Dokunmatik-öncelikli kontrol (kullanıcı geri bildirimi: "çok tuş, modern değil"):** sürekli görünen düğme sayısı 12'den 4'e indi (3 üretim kartı + ses); ✋ Dur ve ✕ yalnızca seçim varken beliriyor. Hareketler (`src/input.js`):
+  - birime dokun = seçime ekle/çıkar; çift dokun = ekrandaki aynı tür; üsse dokun (seçim yokken) = hepsi
+  - boş yerde sürükle = çerçeveyle seç; **iki parmak** = kaydır + yakınlaştır (tek parmakla kaydırma bilerek kaldırıldı)
+  - birimden sürükle ve bırak = ok çizer gibi gönder (seç + gönder tek hareket)
+  - seçiliyken boşa dokun = saldır; boşa **basılı tut** = savaşmadan koş (geri çekilme)
+  - görsel geri bildirim: hedef halkası, kesik çizgi yol, ok; saldır sarı, koş mavi
+  - kaldırılanlar: Hepsi, İptal/Bırak, Üs, Kutu, Saldır/Yürü kipi, grup düğmeleri (klavye kısayolları 1-3, S, Esc duruyor)
+  - Bilinen bedel: tek parmakla kaydırma yok. Harita küçük olduğu için sorun olmaması bekleniyor, cihazda doğrulanmadı.
 
 ## Doğrulanmadı / açık işler
 - Gerçek telefonda dokunma hissi, performans (çok birimli savaşlar), ses.

@@ -20,7 +20,7 @@ try { const d = localStorage.getItem('sw-diff'); if (d in DIFFICULTY) diff = d; 
 const cam = { x: 0, y: 0, zoom: 1, w: 0, h: 0 };
 const fx = createFx();
 const vision = createVision();
-const ui = { selected: new Set(), box: null, boxMode: false, time: 0, mode: 'attack', groups: [[], [], []], fx, vision, project: (i, j) => toScreen(cam, i, j) };
+const ui = { selected: new Set(), box: null, arrow: null, pings: [], camMoved: false, usedRun: false, time: 0, groups: [[], [], []], fx, vision, project: (i, j) => toScreen(cam, i, j) };
 
 // Çizim boyutu, tuvalin gerçek (CSS) boyutundan alınır; böylece iPhone Safari'de adres çubuğu açılıp kapanınca
 // çizim ile dokunma koordinatları kaymaz. Yakınlaştırma yeniden boyutlandırmada sıfırlanmaz.
@@ -43,45 +43,19 @@ bindInput(canvas, cam, () => game, ui);
 canvas.addEventListener('pointerdown', unlockAudio);
 document.getElementById('mute').onclick = e => { unlockAudio(); setMuted(!isMuted()); e.target.textContent = isMuted() ? '🔇' : '🔊'; };
 
-document.getElementById('all').onclick = () => { ui.selected.clear(); game.units.forEach(u => u.team === 0 && ui.selected.add(u.id)); };
-document.getElementById('none').onclick = () => ui.selected.clear();
-document.getElementById('base').onclick = focusBase;
-document.getElementById('all').addEventListener('click', clickSound);
-
-// Komutlar: kip değiştirme ve dur
-const modeBtn = document.getElementById('mode');
-const showMode = () => { modeBtn.textContent = ui.mode === 'attack' ? '⚔️ Saldır' : '🏃 Yürü'; };
-modeBtn.onclick = () => { ui.mode = ui.mode === 'attack' ? 'move' : 'attack'; showMode(); clickSound(); };
+// Seçim varken beliren küçük çubuk: ✋ Dur ve ✕ (seçimi bırak)
+const selBar = document.getElementById('sel'), selClear = document.getElementById('selclear');
 document.getElementById('stop').onclick = () => { commandStop(game, [...ui.selected]); clickSound(); };
-showMode();
-const boxBtn = document.getElementById('boxmode');
-const showBox = () => boxBtn.classList.toggle('on', ui.boxMode);
-boxBtn.onclick = () => { ui.boxMode = !ui.boxMode; showBox(); clickSound(); };
+selClear.onclick = () => { ui.selected.clear(); clickSound(); };
 
-// Gruplar: boşsa dokununca seçimi kaydeder, doluysa seçer; basılı tutunca üzerine yazar
-const groupBtns = [...document.querySelectorAll('[data-group]')];
+// Masaüstü kısayolları (isteğe bağlı): 1-3 grup seç, Ctrl+1-3 kaydet, S dur, Esc seçimi bırak
 const alive = id => game.units.some(u => u.id === id);
 const saveGroup = n => { ui.groups[n] = [...ui.selected].filter(alive); };
 const recallGroup = n => { ui.groups[n] = ui.groups[n].filter(alive); ui.selected.clear(); ui.groups[n].forEach(id => ui.selected.add(id)); };
-groupBtns.forEach(b => {
-  const n = +b.dataset.group; let t = null, long = false;
-  b.addEventListener('pointerdown', () => { long = false; t = setTimeout(() => { long = true; saveGroup(n); clickSound(); }, 500); });
-  const up = () => { clearTimeout(t); };
-  b.addEventListener('pointerleave', up); b.addEventListener('pointercancel', up);
-  b.addEventListener('pointerup', () => {
-    up(); if (long) return;
-    ui.groups[n] = ui.groups[n].filter(alive);
-    if (ui.groups[n].length) recallGroup(n); else if (ui.selected.size) saveGroup(n);
-    clickSound();
-  });
-});
-const showGroups = () => groupBtns.forEach(b => { const n = +b.dataset.group; b.textContent = `${n + 1}·${ui.groups[n].filter(alive).length}`; });
-
-// Masaüstü kısayolları (isteğe bağlı): 1-3 seç, Ctrl+1-3 kaydet, S dur, A kip
 window.addEventListener('keydown', e => {
   if (e.key >= '1' && e.key <= '3') { const n = +e.key - 1; if (e.ctrlKey || e.metaKey) { e.preventDefault(); saveGroup(n); } else recallGroup(n); }
   else if (e.key === 's' || e.key === 'S') commandStop(game, [...ui.selected]);
-  else if (e.key === 'a' || e.key === 'A') modeBtn.click();
+  else if (e.key === 'Escape') ui.selected.clear();
 });
 const prodBtns = [...document.querySelectorAll('[data-prod]')];
 const showProd = () => prodBtns.forEach(b => b.classList.toggle('on', game.teams[0].prod === b.dataset.prod));
@@ -119,7 +93,7 @@ $('play').onclick = () => {
 function startGame(cfg) {
   current = cfg;
   game = createGame({ seed: cfg.seed, seats: [0, ...cfg.enemies], startUnits: 3 });
-  ui.vision = createVision(); ui.selected.clear(); ui.groups = [[], [], []]; ui.mode = 'attack'; ui.boxMode = false; showMode(); showBox();
+  ui.vision = createVision(); ui.selected.clear(); ui.groups = [[], [], []]; ui.camMoved = false; ui.usedRun = false; ui.pings.length = 0;
   ais = cfg.enemies.map(t => createAI(t, cfg.diff, cfg.aiDelay || 0));
   fit(); defaultZoom(); focusBase();
   tut = cfg.tutorial ? createTutorial(game, cam, ui) : null;
@@ -148,8 +122,10 @@ function frame(now) {
   game.events.length = 0;
   for (const id of [...ui.selected]) if (!game.units.some(u => u.id === id)) ui.selected.delete(id);
   render(ctx, cam, game, ui);
-  const t = 0; showProd(); showGroups(); $('none').classList.toggle('has', ui.selected.size > 0);
-  hud.textContent = `Nokta ${ownedCount(game, t)} · Birim ${unitCount(game, t)}/${capacity(game, t)} · Üretim ${(spawnInterval(game, t) * CFG.types[game.teams[0].prod].cost).toFixed(1)}sn · Güç x${buff(game, t).toFixed(2)} · Seçili ${ui.selected.size}`;
+  const t = 0; showProd();
+  selBar.hidden = ui.selected.size === 0; selClear.textContent = `✕ ${ui.selected.size}`;
+  for (const pg of ui.pings.splice(0)) fx.add({ type: 'ping', ...pg });
+  hud.textContent = `Nokta ${ownedCount(game, t)} · Birim ${unitCount(game, t)}/${capacity(game, t)} · Üretim ${(spawnInterval(game, t) * CFG.types[game.teams[0].prod].cost).toFixed(1)}sn · Güç x${buff(game, t).toFixed(2)}`;
   const sd = $('seed'); sd.hidden = !(started && current && current.seed); if (!sd.hidden) sd.textContent = 'Harita #' + current.seed;
   if (started && !ended && game.winner !== -1) showEnd(game.winner === 0);
   if (tut && !tut.finished()) {

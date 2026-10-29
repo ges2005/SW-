@@ -1,19 +1,20 @@
 import { toTile, clampCam, minimapRect } from './iso.js';
 import { commandMove } from './sim.js';
 
-// Tek parmak / sol tık ile tüm kontrol (telefon ve masaüstünde aynı):
-//   dokun/tıkla          -> kendi birimini seç (seçiliye tekrar dokun = bırak) ya da seçiliyi oraya gönder
-//   sürükle              -> haritayı kaydır
-//   basılı tut + sürükle -> kutu seçimi
-//   ▭ Kutu açıkken        -> sürükle = kutu seçimi, birime dokun = seçime ekle/çıkar
-//   iki parmak            -> yakınlaştır ve kaydır; tekerlek -> yakınlaştır
+// Dokunmatik öncelikli kontrol (fare ile de aynı):
+//   birime dokun               -> seçime ekle / çıkar        (çift dokun: ekrandaki aynı türden hepsi)
+//   üssüne dokun               -> (seçim yokken) hepsini seç
+//   boş yere dokun             -> seçili birimleri gönder (saldır)
+//   boş yerde basılı tut       -> seçili birimler savaşmadan koşar (geri çekilme)
+//   birimden sürükle, bırak    -> o birimi (seçiliyse tüm seçimi) bırakılan yere gönder
+//   boş yerde sürükle          -> çerçeveyle seç
+//   iki parmak                 -> kaydır + yakınlaştır   (fare: sağ tuşla sürükle, tekerlek)
 export function bindInput(canvas, cam, getGame, ui) {
   const ptrs = new Map();
   let drag = null, pinch = null, holdTimer = null, lastTap = { id: -1, t: 0 };
-  const MOVE = 8, HOLD = 300;
+  const MOVE = 10, HOLD = 380;
 
-  // Dokunma noktasını tuvalin çizim koordinatlarına çevirir (CSS boyutu çizim boyutundan farklı olsa da doğru kalır;
-  // iPhone Safari'de adres çubuğu görünürken görünen alan 100vh'den küçüktür).
+  // Dokunma noktasını tuvalin çizim koordinatlarına çevirir (CSS boyutu çizim boyutundan farklı olsa da doğru kalır).
   const pos = e => {
     const r = canvas.getBoundingClientRect();
     return { x: (e.clientX - r.left) * cam.w / r.width, y: (e.clientY - r.top) * cam.h / r.height };
@@ -23,51 +24,60 @@ export function bindInput(canvas, cam, getGame, ui) {
     const m = minimapRect(cam), N = 24;
     const a = ((p.x - m.x) / m.w - 0.5) * 2 / 0.92, b = ((p.y - m.y) / m.h - 0.5) * 2 / 0.92;
     const i = N / 2 + (a + b) * N / 2, j = N / 2 + (b - a) * N / 2;
-    cam.x = (i - j) * 32; cam.y = (i + j) * 16; clampCam(cam);
+    cam.x = (i - j) * 32; cam.y = (i + j) * 16; clampCam(cam); ui.camMoved = true;
+  };
+  const tileAt = p => { const t = toTile(cam, p.x, p.y); return { x: Math.max(0, Math.min(24, t.i)), y: Math.max(0, Math.min(24, t.j)) }; };
+
+  // Parmağa uygun geniş dokunma alanı; gövdenin ortasına olan uzaklık ölçülür.
+  function hitUnit(p) {
+    let best = null, bd = Math.max(28, 40 * cam.zoom);
+    for (const u of getGame().units) {
+      if (u.team !== 0) continue;
+      const s = ui.project(u.x, u.y);
+      const d = Math.hypot(s.x - p.x, (s.y - 18 * cam.zoom) - p.y);
+      if (d < bd) { bd = d; best = u; }
+    }
+    return best;
+  }
+  function hitBase(p) {
+    const b = getGame().points.find(q => q.base && q.team === 0);
+    if (!b) return false;
+    const t = toTile(cam, p.x, p.y);
+    return Math.hypot(t.i - b.x, t.j - b.y) < 1.4;
+  }
+
+  const send = (ids, p, mode) => {
+    const t = tileAt(p);
+    commandMove(getGame(), ids, t.x, t.y, mode);
+    ui.pings.push({ x: t.x, y: t.y, mode });
   };
 
   function selectBox(b) {
-    const g = getGame(); if (!b) return;
     ui.selected.clear();
-    for (const u of g.units) {
+    for (const u of getGame().units) {
       if (u.team !== 0) continue;
-      const s = ui.project(u.x, u.y);
-      const cy = s.y - 18 * cam.zoom; // gövdenin ortası
+      const s = ui.project(u.x, u.y), cy = s.y - 18 * cam.zoom; // gövdenin ortası
       if (s.x >= b.x - 6 && s.x <= b.x + b.w + 6 && cy >= b.y - 6 && cy <= b.y + b.h + 6) ui.selected.add(u.id);
     }
   }
 
-  function tap(p) {
-    const g = getGame();
-    let best = null, bd = Math.max(28, 40 * cam.zoom); // parmağa uygun geniş dokunma alanı
-    for (const u of g.units) {
-      if (u.team !== 0) continue;
-      const s = ui.project(u.x, u.y);
-      const d = Math.hypot(s.x - p.x, (s.y - 18 * cam.zoom) - p.y); // gövdenin ortasına olan uzaklık
-      if (d < bd) { bd = d; best = u; }
-    }
-    if (best) {
-      const now = performance.now();
-      if (ui.boxMode) { // kutu kipinde dokunma seçime ekler/çıkarır
-        if (ui.selected.has(best.id)) ui.selected.delete(best.id); else ui.selected.add(best.id);
-        return;
+  function tapUnit(u) {
+    const now = performance.now();
+    if (lastTap.id === u.id && now - lastTap.t < 350) { // çift dokunma: ekrandaki aynı türden tüm birimler
+      for (const v of getGame().units) {
+        if (v.team !== 0 || v.type !== u.type) continue;
+        const s = ui.project(v.x, v.y);
+        if (s.x >= 0 && s.x <= cam.w && s.y >= 0 && s.y <= cam.h) ui.selected.add(v.id);
       }
-      if (ui.selected.size === 1 && ui.selected.has(best.id)) { ui.selected.clear(); lastTap = { id: -1, t: 0 }; return; } // seçiliye tekrar dokun = bırak
-      ui.selected.clear(); ui.selected.add(best.id);
-      if (lastTap.id === best.id && now - lastTap.t < 350) { // çift dokunma: ekrandaki aynı türden tüm birimler
-        for (const u of g.units) {
-          if (u.team !== 0 || u.type !== best.type) continue;
-          const s = ui.project(u.x, u.y);
-          if (s.x >= 0 && s.x <= cam.w && s.y >= 0 && s.y <= cam.h) ui.selected.add(u.id);
-        }
-      }
-      lastTap = { id: best.id, t: now };
-      return;
+      lastTap = { id: -1, t: 0 }; return;
     }
-    if (ui.selected.size) {
-      const t = toTile(cam, p.x, p.y);
-      commandMove(g, [...ui.selected], Math.max(0, Math.min(24, t.i)), Math.max(0, Math.min(24, t.j)), ui.mode);
-    }
+    if (ui.selected.has(u.id)) ui.selected.delete(u.id); else ui.selected.add(u.id);
+    lastTap = { id: u.id, t: now };
+  }
+
+  function tapGround(p) {
+    if (ui.selected.size) { send([...ui.selected], p, 'attack'); return; }
+    if (hitBase(p)) getGame().units.forEach(u => { if (u.team === 0) ui.selected.add(u.id); }); // üsse dokun = hepsini seç
   }
 
   const mid = () => { const [a, b] = [...ptrs.values()]; return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, d: Math.hypot(a.x - b.x, a.y - b.y) }; };
@@ -76,13 +86,19 @@ export function bindInput(canvas, cam, getGame, ui) {
     canvas.setPointerCapture(e.pointerId);
     const p = pos(e); ptrs.set(e.pointerId, p);
     if (ptrs.size === 2) {
-      clearTimeout(holdTimer); drag = null; ui.box = null;
+      clearTimeout(holdTimer); drag = null; ui.box = null; ui.arrow = null;
       const m = mid(); pinch = { d: m.d, z: cam.zoom, mx: m.x, my: m.y };
       return;
     }
+    if (e.pointerType === 'mouse' && e.button === 2) { drag = { mode: 'pan', last: p }; return; }
     if (inMini(p)) { drag = { mini: true }; miniTo(p); return; }
-    drag = { start: p, last: p, mode: 'wait' };
-    holdTimer = setTimeout(() => { if (drag && drag.mode === 'wait') { drag.mode = 'box'; ui.box = { x: p.x, y: p.y, w: 0, h: 0 }; } }, HOLD);
+    const u = hitUnit(p);
+    drag = { start: p, last: p, mode: u ? 'unit' : 'wait', unit: u };
+    if (!u && ui.selected.size) { // boş yerde basılı tut = koşarak git (savaşmaz)
+      holdTimer = setTimeout(() => {
+        if (drag && drag.mode === 'wait') { send([...ui.selected], p, 'move'); ui.usedRun = true; drag.mode = 'done'; if (navigator.vibrate) navigator.vibrate(15); }
+      }, HOLD);
+    }
   });
 
   canvas.addEventListener('pointermove', e => {
@@ -92,17 +108,19 @@ export function bindInput(canvas, cam, getGame, ui) {
       const m = mid();
       cam.x -= (m.x - pinch.mx) / cam.zoom; cam.y -= (m.y - pinch.my) / cam.zoom;
       cam.zoom = pinch.z * m.d / pinch.d; pinch.mx = m.x; pinch.my = m.y;
-      clampCam(cam); return;
+      clampCam(cam); ui.camMoved = true; return;
     }
     if (!drag) return;
     if (drag.mini) { miniTo(p); return; }
-    if (drag.mode === 'wait' && Math.hypot(p.x - drag.start.x, p.y - drag.start.y) > MOVE) {
+    if (drag.mode === 'pan') { cam.x -= (p.x - drag.last.x) / cam.zoom; cam.y -= (p.y - drag.last.y) / cam.zoom; drag.last = p; clampCam(cam); ui.camMoved = true; return; }
+    const moved = Math.hypot(p.x - drag.start.x, p.y - drag.start.y);
+    if (moved > MOVE) {
       clearTimeout(holdTimer);
-      drag.mode = ui.boxMode ? 'box' : 'pan';
-      if (drag.mode === 'box') ui.box = { x: drag.start.x, y: drag.start.y, w: 0, h: 0 };
+      if (drag.mode === 'wait') drag.mode = 'box';
+      if (drag.mode === 'unit') { drag.mode = 'arrow'; if (!ui.selected.has(drag.unit.id)) { ui.selected.clear(); ui.selected.add(drag.unit.id); } }
     }
-    if (drag.mode === 'pan') { cam.x -= (p.x - drag.last.x) / cam.zoom; cam.y -= (p.y - drag.last.y) / cam.zoom; clampCam(cam); }
     if (drag.mode === 'box') ui.box = { x: Math.min(p.x, drag.start.x), y: Math.min(p.y, drag.start.y), w: Math.abs(p.x - drag.start.x), h: Math.abs(p.y - drag.start.y) };
+    if (drag.mode === 'arrow') { const s = ui.project(drag.unit.x, drag.unit.y); ui.arrow = { x0: s.x, y0: s.y - 18 * cam.zoom, x1: p.x, y1: p.y }; }
     drag.last = p;
   });
 
@@ -111,13 +129,19 @@ export function bindInput(canvas, cam, getGame, ui) {
     clearTimeout(holdTimer);
     if (pinch) { if (ptrs.size < 2) pinch = null; drag = null; return; }
     if (!had || !drag) return;
-    if (drag.mode === 'wait') tap(drag.last);
-    if (drag.mode === 'box') { selectBox(ui.box); ui.box = null; }
-    drag = null;
+    if (drag.mode === 'wait') tapGround(drag.last);
+    else if (drag.mode === 'unit') tapUnit(drag.unit);
+    else if (drag.mode === 'box') { if (ui.box && ui.box.w > 14 && ui.box.h > 14) selectBox(ui.box); }
+    else if (drag.mode === 'arrow') { const a = ui.arrow; if (a && Math.hypot(a.x1 - a.x0, a.y1 - a.y0) > 30) send([...ui.selected], { x: a.x1, y: a.y1 }, 'attack'); }
+    ui.box = null; ui.arrow = null; drag = null;
   };
   canvas.addEventListener('pointerup', end);
   canvas.addEventListener('pointercancel', end);
   canvas.addEventListener('lostpointercapture', end); // yakalama kaybolursa takılı parmak kalmasın
-  canvas.addEventListener('wheel', e => { e.preventDefault(); cam.zoom *= e.deltaY < 0 ? 1.1 : 0.9; clampCam(cam); }, { passive: false });
+  canvas.addEventListener('wheel', e => { e.preventDefault(); cam.zoom *= e.deltaY < 0 ? 1.1 : 0.9; clampCam(cam); ui.camMoved = true; }, { passive: false });
   canvas.addEventListener('contextmenu', e => e.preventDefault());
+  window.addEventListener('keydown', e => { // masaüstü: ok tuşları / WASD ile kaydır
+    const k = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key]; if (!k) return;
+    cam.x += k[0] * 60 / cam.zoom; cam.y += k[1] * 40 / cam.zoom; clampCam(cam); ui.camMoved = true; e.preventDefault();
+  });
 }

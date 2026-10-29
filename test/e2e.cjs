@@ -18,83 +18,114 @@ const ok = (c, m) => { if (!c) throw new Error('BAŞARISIZ: ' + m); console.log(
   const ctx = await browser.newContext({ viewport: { width: 390, height: 780 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 });
   const p = await ctx.newPage(); const errs = [];
   p.on('pageerror', e => errs.push(e.message)); p.on('console', m => m.type() === 'error' && errs.push(m.text()));
-  await p.goto(url); await p.waitForTimeout(400);
+  const cdp = await ctx.newCDPSession(p);
+  const touch = (type, pts) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: pts });
+  const wait = ms => p.waitForTimeout(ms);
+  const st = () => p.evaluate(() => { const { ui, game } = window.__game(); return { sel: ui.selected.size, selBar: !document.getElementById('sel').hidden, run: ui.usedRun, units: game.units.filter(u => u.team === 0).length }; });
+  // ekran (CSS) koordinatları: birim gövdesi, nokta
+  const unitXY = i => p.evaluate(i => { const { game, ui, cam } = window.__game(); const u = game.units.filter(x => x.team === 0)[i]; const s = ui.project(u.x, u.y); const r = document.getElementById('c').getBoundingClientRect(); return { x: s.x * r.width / cam.w, y: (s.y - 18 * cam.zoom) * r.height / cam.h }; }, i);
+  const tileXY = (i, j) => p.evaluate(([i, j]) => { const { ui, cam } = window.__game(); const s = ui.project(i, j); const r = document.getElementById('c').getBoundingClientRect(); return { x: s.x * r.width / cam.w, y: s.y * r.height / cam.h }; }, [i, j]);
+  const swipe = async (from, to, steps = 6) => { await touch('touchStart', [from]); for (let k = 1; k <= steps; k++) await touch('touchMove', [{ x: from.x + (to.x - from.x) * k / steps, y: from.y + (to.y - from.y) * k / steps }]); await touch('touchEnd', []); await wait(600); };
+  // birimleri sabitle ve üssün önüne diz (testler hareketten etkilenmesin)
+  const freeze = () => p.evaluate(() => { const { game, cam, ui } = window.__game(); cam.zoom = 0.7; ui.selected.clear(); game.units.forEach(u => { u.tx = u.ty = null; u.hold = true; u.mode = 'attack'; }); const b = game.points.find(x => x.base && x.team === 0); game.units.filter(u => u.team === 0).forEach((u, k) => { u.x = b.x + (k - 1) * 1.6; u.y = b.y + 1.5; }); });
+
+  await p.goto(url); await wait(400);
   ok(await p.isVisible('#menu'), 'menü açılışta görünüyor');
   ok(await p.locator('.level').count() === 6, '6 bölüm listeleniyor');
   ok(await p.locator('.level:disabled').count() === 5, 'yalnızca öğretici açık, diğerleri kilitli');
 
-  // Öğretici bölümü: seç -> gönder -> adım ilerler
-  await p.tap('.level:nth-child(1)'); await p.waitForTimeout(300);
+  // Öğretici: birime dokun -> adım ilerler
+  await p.tap('.level:nth-child(1)'); await wait(300);
   ok(!(await p.isVisible('#menu')) && await p.isVisible('#tut'), 'bölüm başladı, öğretici bandı görünüyor');
-  await p.tap('#all'); await p.waitForTimeout(1500);
-  ok((await p.textContent('#tut-n')) === '2/7', 'öğretici seçimden sonra 2. adıma geçti');
+  const u0 = await unitXY(0);
+  await p.touchscreen.tap(u0.x, u0.y); await wait(1500);
+  ok((await p.textContent('#tut-n')) === '2/7', 'öğretici birime dokununca 2. adıma geçti');
 
-  // Kazanma akışı
+  // Kazanma / kaybetme akışı
   await p.evaluate(() => { const { game } = window.__game(); game.teams.forEach(t => { if (t.id !== 0) t.alive = false; }); game.winner = 0; });
-  await p.waitForTimeout(400);
+  await wait(400);
   ok((await p.textContent('#msg > span')) === 'Kazandın!', 'kazanma ekranı');
   ok(await p.isVisible('#next'), '"Sonraki bölüm" görünüyor');
   ok((await p.evaluate(() => JSON.parse(localStorage.getItem('sw-progress')).done.join())) === 'ogretici', 'ilerleme kaydedildi');
-  await p.tap('#next'); await p.waitForTimeout(400);
+  await p.tap('#next'); await wait(400);
   ok((await p.evaluate(() => window.__game().game.seed)) === 11, 'bölüm 1 rastgele harita seed 11 ile başladı');
-
-  // Kaybetme akışı + menüye dönüş
-  await p.evaluate(() => { window.__game().game.winner = -2; });
-  await p.waitForTimeout(400);
+  await p.evaluate(() => { window.__game().game.winner = -2; }); await wait(400);
   ok((await p.textContent('#msg > span')) === 'Kaybettin', 'kaybetme ekranı');
   ok(!(await p.isVisible('#next')), 'kayıpta "Sonraki bölüm" yok');
-  await p.tap('#restart'); await p.waitForTimeout(200);
+  await p.tap('#restart'); await wait(200);
   ok(await p.isVisible('#menu') && (await p.locator('.level:disabled').count()) === 4, 'menüye dönüldü, bölüm 1 açıldı');
 
   // Hızlı oyun
-  await p.tap('[data-tab="quick"]'); await p.tap('[data-diff="zor"]'); await p.tap('[data-en="2"]'); await p.tap('#play'); await p.waitForTimeout(2500);
+  await p.tap('[data-tab="quick"]'); await p.tap('[data-diff="zor"]'); await p.tap('[data-en="2"]'); await p.tap('#play'); await wait(2500);
   const q = await p.evaluate(() => { const { game } = window.__game(); return { seats: game.seats.join(), t: game.t }; });
   ok(q.seats === '0,1,3' && q.t > 1, 'hızlı oyun 2 rakiple çalışıyor ve zaman ilerliyor');
-  // --- Dokunma düzeltmeleri (iPhone geri bildirimi) ---
-  const cdp = await ctx.newCDPSession(p);
-  const touch = async (type, pts) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: pts });
-  const state = () => p.evaluate(() => { const { ui } = window.__game(); return { sel: ui.selected.size, box: ui.boxMode }; });
-  const unitXY = i => p.evaluate(i => { const { game, ui, cam } = window.__game(); const us = game.units.filter(u => u.team === 0); const u = us[i]; const s = ui.project(u.x, u.y); const r = document.getElementById('c').getBoundingClientRect(); return { x: s.x * r.width / cam.w, y: (s.y - 18 * cam.zoom) * r.height / cam.h }; }, i);
+  ok((await p.locator('button:visible').count()) <= 8, 'oyun ekranında en fazla 8 düğme görünüyor (seçim yokken 5)');
 
-  // 1) adres çubuğu simülasyonu: tuval CSS boyutu çizim boyutundan büyük olsa da hedef doğru kareye gider
-  await p.evaluate(() => { document.getElementById('c').style.height = 'calc(100vh * 1.12)'; });
-  await p.waitForTimeout(300);
-  await p.tap('#all');
-  const goal = await p.evaluate(() => { const { game, ui, cam } = window.__game(); const b = game.points.find(x => x.base && x.team === 0); const g = { i: b.x - 3, j: b.y + 2 }; const s = ui.project(g.i, g.j); const r = document.getElementById('c').getBoundingClientRect(); return { ...g, x: s.x * r.width / cam.w, y: s.y * r.height / cam.h }; });
-  await p.touchscreen.tap(goal.x, goal.y); await p.waitForTimeout(150);
-  const got = await p.evaluate(() => { const u = window.__game().game.units.find(x => x.team === 0 && x.tx !== null); return u && { tx: u.tx, ty: u.ty }; });
-  ok(got && Math.hypot(got.tx - goal.i, got.ty - goal.j) < 0.6, 'dokunulan yere gidiyor (tuval ölçüsü kaysa bile, hata < 0.6 kare)');
-  await p.evaluate(() => { document.getElementById('c').style.height = ''; }); await p.waitForTimeout(300);
-  await p.evaluate(() => { const { cam } = window.__game(); cam.zoom = 1.3; window.dispatchEvent(new Event('resize')); });
-  await p.waitForTimeout(150);
+  // --- Dokunmatik hareketler ---
+  await freeze(); await wait(100);
+  ok(!(await st()).selBar, 'seçim yokken ✋/✕ çubuğu gizli');
+
+  // seçime ekle / çıkar
+  const a = await unitXY(0), b = await unitXY(1), c = await unitXY(2);
+  await p.touchscreen.tap(a.x, a.y); await wait(450); await p.touchscreen.tap(b.x, b.y); await wait(450);
+  ok((await st()).sel === 2 && (await st()).selBar, 'art arda dokunmak seçime ekliyor, çubuk görünüyor');
+  await p.touchscreen.tap(a.x, a.y); await wait(450);
+  ok((await st()).sel === 1, 'seçili birime tekrar dokunmak seçimden çıkarıyor');
+  await p.tap('#selclear'); await wait(150);
+  ok((await st()).sel === 0 && !(await st()).selBar, '✕ düğmesi seçimi bırakıyor ve çubuk kayboluyor');
+
+  // üsse dokun = hepsi
+  const base = await p.evaluate(() => { const { game } = window.__game(); const b2 = game.points.find(x => x.base && x.team === 0); return { i: b2.x, j: b2.y }; });
+  const bxy = await tileXY(base.i + 0.4, base.j - 0.9);
+  await p.touchscreen.tap(bxy.x, bxy.y); await wait(450);
+  ok((await st()).sel === (await st()).units, 'üsse dokununca hepsi seçiliyor');
+  await p.tap('#selclear'); await wait(150);
+
+  // boş yerde sürükle = çerçeveyle seç (tek parmak, düğmeye gerek yok)
+  const cam0 = await p.evaluate(() => { const { cam } = window.__game(); return { x: cam.x, y: cam.y }; });
+  const xs = [a, b, c].map(q => q.x), ys = [a, b, c].map(q => q.y);
+  await swipe({ x: Math.min(...xs) - 55, y: Math.min(...ys) - 55 }, { x: Math.max(...xs) + 55, y: Math.max(...ys) + 55 });
+  ok((await st()).sel === 3, 'boş yerde tek parmakla sürükleyince çerçevedekiler seçiliyor');
+  ok(await p.evaluate(c0 => { const { cam } = window.__game(); return cam.x === c0.x && cam.y === c0.y; }, cam0), 'tek parmak sürükleme haritayı kaydırmıyor');
+
+  // seçiliyken dokun = saldır, doğru kareye (tuval ölçüsü kaysa bile)
+  await p.evaluate(() => { document.getElementById('c').style.height = 'calc(100vh * 1.12)'; }); await wait(300);
+  const goal = { i: base.i - 3, j: base.j + 2 };
+  const gxy = await tileXY(goal.i, goal.j);
+  await p.touchscreen.tap(gxy.x, gxy.y); await wait(200);
+  const got = await p.evaluate(() => { const u = window.__game().game.units.find(x => x.team === 0 && x.tx !== null); return u && { tx: u.tx, ty: u.ty, mode: u.mode }; });
+  ok(got && Math.hypot(got.tx - goal.i, got.ty - goal.j) < 0.7 && got.mode === 'attack', 'seçiliyken dokunulan yere saldır-hareketiyle gidiyor (tuval ölçüsü kaysa bile)');
+  await p.evaluate(() => { document.getElementById('c').style.height = ''; }); await wait(300);
+  await p.evaluate(() => { const { cam } = window.__game(); cam.zoom = 1.3; window.dispatchEvent(new Event('resize')); }); await wait(150);
   ok((await p.evaluate(() => window.__game().cam.zoom)) === 1.3, 'yeniden boyutlandırma yakınlaştırmayı sıfırlamıyor');
-  await p.evaluate(() => { const { game, cam, ui } = window.__game(); cam.zoom = 0.7; ui.selected.clear(); game.units.forEach(u => { u.tx = u.ty = null; u.hold = true; }); const b = game.points.find(x => x.base && x.team === 0); game.units.filter(u => u.team === 0).forEach((u, k) => { u.x = b.x + (k - 1) * 1.6; u.y = b.y + 1.5; }); });
 
-  // 2) bırakma: seçiliye tekrar dokun ya da ✕ Bırak
-  const u0 = await unitXY(0);
-  await p.touchscreen.tap(u0.x, u0.y); await p.waitForTimeout(450);
-  ok((await state()).sel === 1, 'birime dokununca seçiliyor');
-  await p.touchscreen.tap(u0.x, u0.y); await p.waitForTimeout(450);
-  ok((await state()).sel === 0, 'seçiliye tekrar dokununca seçim bırakılıyor');
-  await p.tap('#all'); await p.tap('#none');
-  ok((await state()).sel === 0, '✕ Bırak düğmesi seçimi kaldırıyor');
+  // ✋ Dur
+  await p.tap('#stop'); await wait(150);
+  ok(await p.evaluate(() => (() => { const { game, ui } = window.__game(); const sel = game.units.filter(u => ui.selected.has(u.id)); return sel.length > 0 && sel.every(u => u.tx === null && u.hold); })()), '✋ Dur hedefi iptal edip mevzi tutturuyor');
 
-  // 3) çoklu seçim: ▭ Kutu kipi ile sürükleyerek
-  await p.tap('#boxmode'); ok((await state()).box === true, '▭ Kutu kipi açıldı');
-  const pts = await p.evaluate(() => { const { game, ui, cam } = window.__game(); const r = document.getElementById('c').getBoundingClientRect(); const xy = game.units.filter(u => u.team === 0).map(u => { const s = ui.project(u.x, u.y); return { x: s.x * r.width / cam.w, y: (s.y - 18 * cam.zoom) * r.height / cam.h }; }); return xy; });
-  const x0 = Math.min(...pts.map(q => q.x)) - 30, y0 = Math.min(...pts.map(q => q.y)) - 30, x1 = Math.max(...pts.map(q => q.x)) + 30, y1 = Math.max(...pts.map(q => q.y)) + 30;
-  await touch('touchStart', [{ x: x0, y: y0 }]);
-  for (let k = 1; k <= 6; k++) await touch('touchMove', [{ x: x0 + (x1 - x0) * k / 6, y: y0 + (y1 - y0) * k / 6 }]);
-  await touch('touchEnd', []); await p.waitForTimeout(600);
-  const nUnits = pts.length;
-  ok((await state()).sel === nUnits && nUnits >= 3, `kutu çizince hepsi seçildi (${nUnits} birim)`);
-  await p.tap('#none');
-  const a = await unitXY(0), b2 = await unitXY(1);
-  await p.touchscreen.tap(a.x, a.y); await p.waitForTimeout(100); await p.touchscreen.tap(b2.x, b2.y); await p.waitForTimeout(100);
-  ok((await state()).sel === 2, 'kutu kipinde dokunmak seçime ekliyor');
-  await p.touchscreen.tap(a.x, a.y); await p.waitForTimeout(100);
-  ok((await state()).sel === 1, 'kutu kipinde seçili birime tekrar dokunmak seçimden çıkarıyor');
-  await p.tap('#boxmode');
+  // birimden sürükle = ok çizip gönder (tek hareketle seç + gönder)
+  await freeze(); await wait(100);
+  const a2 = await unitXY(0);
+  const gx = await tileXY(base.i - 4, base.j + 3);
+  await swipe(a2, gx);
+  const arr = await p.evaluate(() => { const { game, ui } = window.__game(); const us = game.units.filter(u => u.team === 0); return { moving: us.filter(u => u.tx !== null).length, sel: ui.selected.size, t: us[0].tx }; });
+  ok(arr.moving === 1 && arr.sel === 1 && arr.t !== null, 'birimden sürükleyip bırakmak yalnızca o birimi gönderiyor');
+
+  // boşta basılı tut = koş (savaşmaz)
+  await freeze(); await wait(100);
+  await p.touchscreen.tap(a2.x, a2.y); await wait(450);
+  const far = await tileXY(base.i - 4, base.j + 3);
+  await touch('touchStart', [far]); await wait(600); await touch('touchEnd', []); await wait(600);
+  const run = await p.evaluate(() => { const { game, ui } = window.__game(); const u = game.units.filter(x => x.team === 0).find(x => x.tx !== null); return { mode: u && u.mode, used: ui.usedRun }; });
+  ok(run.mode === 'move' && run.used, 'boşta basılı tutmak birimleri koşturuyor (savaşmaz kipi)');
+
+  // iki parmak: kaydır + yakınlaştır
+  const before = await p.evaluate(() => { const { cam } = window.__game(); return { x: cam.x, y: cam.y, z: cam.zoom }; });
+  await touch('touchStart', [{ x: 150, y: 400 }, { x: 250, y: 400 }]);
+  for (let k = 1; k <= 6; k++) await touch('touchMove', [{ x: 150 + k * 8, y: 400 + k * 6 }, { x: 250 + k * 12, y: 400 + k * 6 }]);
+  await touch('touchEnd', []); await wait(600);
+  const after = await p.evaluate(() => { const { cam, ui } = window.__game(); return { x: cam.x, y: cam.y, z: cam.zoom, moved: ui.camMoved }; });
+  ok(after.moved && (Math.hypot(after.x - before.x, after.y - before.y) > 20) && after.z > before.z, 'iki parmak haritayı kaydırıyor ve yakınlaştırıyor');
 
   ok(errs.length === 0, 'konsol hatası yok' + (errs.length ? ': ' + errs.join(' | ') : ''));
   await browser.close(); server.close();
