@@ -2,7 +2,8 @@ import { toTile, clampCam, minimapRect } from './iso.js';
 import { commandMove, commandRetreat } from './sim.js';
 
 // Dokunmatik öncelikli kontrol (fare ile de aynı):
-//   birime dokun               -> seçime ekle / çıkar        (çift dokun: ekrandaki aynı türden hepsi)
+//   birime dokun               -> seçili değilken seç (seçiliye tekrar dokun = bırak); çift dokun: ekrandaki aynı türden hepsi
+//   seçiliyken BAŞKA birime dokun -> seçimi o birimin yanına gönderir (onu seçime katmaz); çoklu seçim için çerçeve çiz
 //   üssüne dokun               -> (seçim yokken) hepsini seç
 //   seçiliyken ÜSSE dokun      -> geri çekil (savaşı bırakıp koşar, varınca mevzi tutar); ayrıca ↩ Çekil düğmesi
 //   boş yere dokun             -> seçili birimleri gönder (saldır); emirden sonra seçim kendiliğinden bırakılır
@@ -32,6 +33,7 @@ export function bindInput(canvas, cam, getGame, ui) {
   };
   // Yetenek hedefi: dokunmatikte parmağın kapatmaması için alan parmağın 44 px üstünde gösterilir
   const aimAt = (p, e) => tileAt({ x: p.x, y: p.y - (e && e.pointerType === 'mouse' ? 0 : 44) });
+  ui.aimFromEvent = e => aimAt(pos(e), e); // (yetenek düğmesinden sürüklerken hedefi hesaplamak için)
   const tileAt = p => { const t = toTile(cam, p.x, p.y); return { x: Math.max(0, Math.min(24, t.i)), y: Math.max(0, Math.min(24, t.j)) }; };
 
   // Parmağa uygun geniş dokunma alanı; gövdenin ortasına olan uzaklık ölçülür.
@@ -54,14 +56,15 @@ export function bindInput(canvas, cam, getGame, ui) {
 
   // Emir verir ve seçimi bırakır (başka birine dokununca önceki emir bozulmasın). Geri almak için önceki durumu saklar.
   const snap = ids => getGame().units.filter(u => ids.includes(u.id)).map(u => ({ u, tx: u.tx, ty: u.ty, mode: u.mode, hold: u.hold, retreat: u.retreat }));
-  const send = (ids, p, mode) => {
-    const g = getGame(), t = tileAt(p);
+  const sendTile = (ids, tx, ty, mode, p) => {
+    const g = getGame();
     const before = snap(ids);
-    commandMove(g, ids, t.x, t.y, mode);
-    ui.pings.push({ x: t.x, y: t.y, mode });
+    commandMove(g, ids, tx, ty, mode);
+    ui.pings.push({ x: tx, y: ty, mode });
     ui.selected.clear();
     lastOrder = { t: performance.now(), p, before };
   };
+  const send = (ids, p, mode) => { const t = tileAt(p); sendTile(ids, t.x, t.y, mode, p); };
   // Geri çekil: seçili birimler en yakın kendi noktasına savaşmadan koşar; ↩ Çekil düğmesi de bunu çağırır
   ui.doRetreat = () => {
     const ids = [...ui.selected]; if (!ids.length) return false;
@@ -86,7 +89,7 @@ export function bindInput(canvas, cam, getGame, ui) {
     }
   }
 
-  function tapUnit(u) {
+  function tapUnit(u, p) {
     const now = performance.now();
     if (lastTap.id === u.id && now - lastTap.t < 350) { // çift dokunma: ekrandaki aynı türden tüm birimler
       for (const v of getGame().units) {
@@ -95,6 +98,10 @@ export function bindInput(canvas, cam, getGame, ui) {
         if (s.x >= 0 && s.x <= cam.w && s.y >= 0 && s.y <= cam.h) ui.selected.add(v.id);
       }
       lastTap = { id: -1, t: 0 }; return;
+    }
+    if (ui.selected.size && !ui.selected.has(u.id)) { // seçiliyken başka birime dokun = seçimi onun yanına gönder (seçime katma)
+      sendTile([...ui.selected], u.x, u.y, 'attack', p); lastTap = { id: -1, t: 0 };
+      ui.toast = { text: 'Birimin yanına gidiyorlar', t: now }; return;
     }
     if (ui.selected.has(u.id)) ui.selected.delete(u.id); else ui.selected.add(u.id);
     lastTap = { id: u.id, t: now };
@@ -177,7 +184,7 @@ export function bindInput(canvas, cam, getGame, ui) {
     if (!had || !drag) return;
     if (drag.mode === 'aim') { if (ui.aim && ui.cast(ui.aimSkill, ui.aim.x, ui.aim.y)) ui.usedSkill = true; ui.aimSkill = null; ui.aim = null; }
     else if (drag.mode === 'wait') tapGround(drag.last);
-    else if (drag.mode === 'unit') tapUnit(drag.unit);
+    else if (drag.mode === 'unit') tapUnit(drag.unit, drag.last);
     else if (drag.mode === 'box') { if (ui.box && ui.box.w > 14 && ui.box.h > 14) selectBox(ui.box); }
     else if (drag.mode === 'arrow') { const a = ui.arrow; if (a && Math.hypot(a.x1 - a.x0, a.y1 - a.y0) > 30) send([...ui.selected], { x: a.x1, y: a.y1 }, 'attack'); }
     ui.box = null; ui.arrow = null; drag = null;
