@@ -20,22 +20,25 @@ try { const d = localStorage.getItem('sw-diff'); if (d in DIFFICULTY) diff = d; 
 const cam = { x: 0, y: 0, zoom: 1, w: 0, h: 0 };
 const fx = createFx();
 const vision = createVision();
-const ui = { selected: new Set(), box: null, time: 0, mode: 'attack', groups: [[], [], []], fx, vision, project: (i, j) => toScreen(cam, i, j) };
+const ui = { selected: new Set(), box: null, boxMode: false, time: 0, mode: 'attack', groups: [[], [], []], fx, vision, project: (i, j) => toScreen(cam, i, j) };
 
+// Çizim boyutu, tuvalin gerçek (CSS) boyutundan alınır; böylece iPhone Safari'de adres çubuğu açılıp kapanınca
+// çizim ile dokunma koordinatları kaymaz. Yakınlaştırma yeniden boyutlandırmada sıfırlanmaz.
 function fit() {
   const dpr = window.devicePixelRatio || 1;
-  cam.w = window.innerWidth; cam.h = window.innerHeight;
-  canvas.width = cam.w * dpr; canvas.height = cam.h * dpr;
+  cam.w = canvas.clientWidth || window.innerWidth; cam.h = canvas.clientHeight || window.innerHeight;
+  canvas.width = Math.round(cam.w * dpr); canvas.height = Math.round(cam.h * dpr);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  const small = cam.w < 700;
-  cam.zoom = small ? 0.7 : 1;
 }
+const defaultZoom = () => { cam.zoom = cam.w < 700 ? 0.7 : 1; };
 function focusBase() {
   const b = game.points.find(p => p.base && p.team === 0), w = toWorld(b.x, b.y);
   cam.x = w.x; cam.y = w.y; clampCam(cam);
 }
-fit(); focusBase();
+fit(); defaultZoom(); focusBase();
 window.addEventListener('resize', fit);
+if (window.visualViewport) window.visualViewport.addEventListener('resize', fit);
+if (window.ResizeObserver) new ResizeObserver(fit).observe(canvas);
 bindInput(canvas, cam, () => game, ui);
 canvas.addEventListener('pointerdown', unlockAudio);
 document.getElementById('mute').onclick = e => { unlockAudio(); setMuted(!isMuted()); e.target.textContent = isMuted() ? '🔇' : '🔊'; };
@@ -51,6 +54,9 @@ const showMode = () => { modeBtn.textContent = ui.mode === 'attack' ? '⚔️ Sa
 modeBtn.onclick = () => { ui.mode = ui.mode === 'attack' ? 'move' : 'attack'; showMode(); clickSound(); };
 document.getElementById('stop').onclick = () => { commandStop(game, [...ui.selected]); clickSound(); };
 showMode();
+const boxBtn = document.getElementById('boxmode');
+const showBox = () => boxBtn.classList.toggle('on', ui.boxMode);
+boxBtn.onclick = () => { ui.boxMode = !ui.boxMode; showBox(); clickSound(); };
 
 // Gruplar: boşsa dokununca seçimi kaydeder, doluysa seçer; basılı tutunca üzerine yazar
 const groupBtns = [...document.querySelectorAll('[data-group]')];
@@ -113,9 +119,9 @@ $('play').onclick = () => {
 function startGame(cfg) {
   current = cfg;
   game = createGame({ seed: cfg.seed, seats: [0, ...cfg.enemies], startUnits: 3 });
-  ui.vision = createVision(); ui.selected.clear(); ui.groups = [[], [], []]; ui.mode = 'attack'; showMode();
+  ui.vision = createVision(); ui.selected.clear(); ui.groups = [[], [], []]; ui.mode = 'attack'; ui.boxMode = false; showMode(); showBox();
   ais = cfg.enemies.map(t => createAI(t, cfg.diff, cfg.aiDelay || 0));
-  fit(); focusBase();
+  fit(); defaultZoom(); focusBase();
   tut = cfg.tutorial ? createTutorial(game, cam, ui) : null;
   started = true; ended = false; menu.hidden = true; msg.hidden = true;
 }
@@ -142,7 +148,7 @@ function frame(now) {
   game.events.length = 0;
   for (const id of [...ui.selected]) if (!game.units.some(u => u.id === id)) ui.selected.delete(id);
   render(ctx, cam, game, ui);
-  const t = 0; showProd(); showGroups();
+  const t = 0; showProd(); showGroups(); $('none').classList.toggle('has', ui.selected.size > 0);
   hud.textContent = `Nokta ${ownedCount(game, t)} · Birim ${unitCount(game, t)}/${capacity(game, t)} · Üretim ${(spawnInterval(game, t) * CFG.types[game.teams[0].prod].cost).toFixed(1)}sn · Güç x${buff(game, t).toFixed(2)} · Seçili ${ui.selected.size}`;
   const sd = $('seed'); sd.hidden = !(started && current && current.seed); if (!sd.hidden) sd.textContent = 'Harita #' + current.seed;
   if (started && !ended && game.winner !== -1) showEnd(game.winner === 0);

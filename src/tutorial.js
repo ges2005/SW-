@@ -4,7 +4,7 @@ import { ownedCount } from './sim.js';
 export function createTutorial(game, cam, ui) {
   const start = { x: cam.x, y: cam.y, zoom: cam.zoom };
   const steps = [
-    { text: 'Bir birime dokun ya da "Hepsi" düğmesine bas. Seçili birimlerin altında beyaz halka görünür.', done: () => ui.selected.size > 0 },
+    { text: 'Bir birime dokun ya da "Hepsi"ye bas; altında beyaz halka çıkar. Seçiliye tekrar dokunursan ya da ✕ Bırak\'a basarsan seçim kalkar. Birden çok birim için ▭ Kutu\'yu aç ve parmağınla çerçeve çiz.', done: () => ui.selected.size > 0 },
     { text: 'Şimdi haritada bir ♥ ya da ♠ noktasına dokun. Seçili birimler oraya yürür.', done: () => game.units.some(u => u.team === 0 && u.tx !== null) },
     { text: 'Birimler bir noktada beklerse orayı ele geçirir. Daha çok nokta = daha hızlı üretim, daha çok kapasite, daha güçlü birim. Bir nokta ele geçir.', done: () => ownedCount(game, 0) >= 2 },
     { text: 'Üretilecek türü soldaki ⚔️ 🏹 🛡️ düğmeleriyle seç. Piyon okçuyu, okçu zırhlıyı, zırhlı piyonu yener. Birini değiştir.', done: () => game.teams[0].prod !== 'piyon' },
