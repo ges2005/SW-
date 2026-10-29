@@ -14,6 +14,13 @@ export const CFG = {
     zirh:  { label: 'Zırhlı', hp: 140, dmg: 7,  cooldown: 0.9, range: 1.1, speed: 1.6, cost: 1.5, vision: 4, beats: 'piyon' },
   },
   counter: { advantage: 1.5, disadvantage: 0.75 },
+  // Özel yetenekler: her takımın üçü de var; alan etkili, bekleme süreli. Başlangıçta 15 sn beklenir.
+  skills: {
+    sifa:   { ad: 'Şifa', kisa: 'Şifa', ikon: '💚', radius: 3.2, heal: 0.3, cd: 45, renk: '#4cd964' },
+    yagmur: { ad: 'Ok Yağmuru', kisa: 'Yağmur', ikon: '☄️', radius: 2.6, dmg: 45, cd: 35, renk: '#ff7a3d' },
+    hiz:    { ad: 'Hız', kisa: 'Hız', ikon: '⚡', radius: 3.4, dur: 6, mult: 1.6, atkMult: 1.5, cd: 40, renk: '#5ac8fa' },
+  },
+  skillStartCd: 15,
   sight: 4,
   // Görüş alanı (kare). Sis yalnızca oyuncu takımı için uygulanır.
   fog: { enabled: true, point: 5, base: 7 },

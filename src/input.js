@@ -5,7 +5,8 @@ import { commandMove } from './sim.js';
 //   birime dokun               -> seçime ekle / çıkar        (çift dokun: ekrandaki aynı türden hepsi)
 //   üssüne dokun               -> (seçim yokken) hepsini seç
 //   boş yere dokun             -> seçili birimleri gönder (saldır); emirden sonra seçim kendiliğinden bırakılır
-//   İKİ PARMAKLA tek dokunuş   -> seçimi bırakır; seçim yoksa son emri (5 sn içinde) geri alır
+//   yetenek seçiliyken         -> parmağı bas = alanı göster (parmağın biraz üstünde), sürükle = ayarla, bırak = kullan
+//   İKİ PARMAKLA tek dokunuş   -> seçimi bırakır (yetenek hedeflemeyi de iptal eder); seçim yoksa son emri (5 sn içinde) geri alır
 //   boş yere ÇİFT dokun (tek parmak, art arda) -> (600 ms içinde) emri geri alır ve seçimi bırakır
 //   boş yerde basılı tut       -> seçili birimler savaşmadan koşar (geri çekilme)
 //   birimden sürükle, bırak    -> o birimi (seçiliyse tüm seçimi) bırakılan yere gönder
@@ -28,6 +29,8 @@ export function bindInput(canvas, cam, getGame, ui) {
     const i = N / 2 + (a + b) * N / 2, j = N / 2 + (b - a) * N / 2;
     cam.x = (i - j) * 32; cam.y = (i + j) * 16; clampCam(cam); ui.camMoved = true;
   };
+  // Yetenek hedefi: dokunmatikte parmağın kapatmaması için alan parmağın 44 px üstünde gösterilir
+  const aimAt = (p, e) => tileAt({ x: p.x, y: p.y - (e && e.pointerType === 'mouse' ? 0 : 44) });
   const tileAt = p => { const t = toTile(cam, p.x, p.y); return { x: Math.max(0, Math.min(24, t.i)), y: Math.max(0, Math.min(24, t.j)) }; };
 
   // Parmağa uygun geniş dokunma alanı; gövdenin ortasına olan uzaklık ölçülür.
@@ -97,7 +100,8 @@ export function bindInput(canvas, cam, getGame, ui) {
 
   // İki parmakla tek dokunuş: seçim varsa bırakır; yoksa az önceki emri (5 sn içinde) geri alır.
   function twoFingerTap() {
-    if (ui.selected.size) { ui.selected.clear(); ui.toast = { text: 'Seçim bırakıldı', t: performance.now() }; }
+    if (ui.aimSkill) { ui.aimSkill = null; ui.aim = null; ui.toast = { text: 'Yetenek iptal edildi', t: performance.now() }; }
+    else if (ui.selected.size) { ui.selected.clear(); ui.toast = { text: 'Seçim bırakıldı', t: performance.now() }; }
     else if (lastOrder && performance.now() - lastOrder.t < 5000) undoOrder();
   }
 
@@ -113,6 +117,7 @@ export function bindInput(canvas, cam, getGame, ui) {
     }
     if (e.pointerType === 'mouse' && e.button === 2) { drag = { mode: 'pan', last: p }; return; }
     if (inMini(p)) { drag = { mini: true }; miniTo(p); return; }
+    if (ui.aimSkill) { drag = { mode: 'aim' }; ui.aim = aimAt(p, e); return; } // yetenek hedefleme
     const u = hitUnit(p);
     drag = { start: p, last: p, mode: u ? 'unit' : 'wait', unit: u };
     if (!u && ui.selected.size) { // boş yerde basılı tut = koşarak git (savaşmaz)
@@ -134,6 +139,7 @@ export function bindInput(canvas, cam, getGame, ui) {
     }
     if (!drag) return;
     if (drag.mini) { miniTo(p); return; }
+    if (drag.mode === 'aim') { ui.aim = aimAt(p, e); return; }
     if (drag.mode === 'pan') { cam.x -= (p.x - drag.last.x) / cam.zoom; cam.y -= (p.y - drag.last.y) / cam.zoom; drag.last = p; clampCam(cam); ui.camMoved = true; return; }
     const moved = Math.hypot(p.x - drag.start.x, p.y - drag.start.y);
     if (moved > MOVE) {
@@ -157,7 +163,8 @@ export function bindInput(canvas, cam, getGame, ui) {
       drag = null; return;
     }
     if (!had || !drag) return;
-    if (drag.mode === 'wait') tapGround(drag.last);
+    if (drag.mode === 'aim') { if (ui.aim && ui.cast(ui.aimSkill, ui.aim.x, ui.aim.y)) ui.usedSkill = true; ui.aimSkill = null; ui.aim = null; }
+    else if (drag.mode === 'wait') tapGround(drag.last);
     else if (drag.mode === 'unit') tapUnit(drag.unit);
     else if (drag.mode === 'box') { if (ui.box && ui.box.w > 14 && ui.box.h > 14) selectBox(ui.box); }
     else if (drag.mode === 'arrow') { const a = ui.arrow; if (a && Math.hypot(a.x1 - a.x0, a.y1 - a.y0) > 30) send([...ui.selected], { x: a.x1, y: a.y1 }, 'attack'); }

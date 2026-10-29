@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { createGame, step, commandMove, commandStop, ownedCount, capacity, spawnUnit } from '../src/sim.js';
+import { createGame, step, commandMove, commandStop, castSkill, ownedCount, capacity, spawnUnit } from '../src/sim.js';
 import { createAI, stepAI, DIFFICULTY } from '../src/ai.js';
 import { createVision, updateVision, isVisible, isSeen } from '../src/vision.js';
 
@@ -139,3 +139,45 @@ console.log('rastgele harita yapay zeka testi tamam');
   assert.ok(v.hp < v.maxHp, 'ana nokta yakındaki düşmana ateş etmeli');
 }
 console.log('ana nokta kulesi testi tamam');
+
+// Özel yetenekler: şifa %30, ok yağmuru 45 hasar, hız; alan, bekleme ve takım kuralları
+{
+  const arena = () => { const d = createGame(); d.units = []; d.teams.forEach(t => { t.spawnT = -1e9; }); return d; };
+  const warm = d => { for (let i = 0; i < 20 * 16; i++) { d.teams.forEach(t => { t.spawnT = -1e9; }); step(d, 0.05); } };
+  const g = arena();
+  assert.equal(castSkill(g, 0, 'sifa', 12, 12), false, 'başlangıç beklemesi: hemen kullanılamaz');
+  warm(g);
+  const near = spawnUnit(g, 0, 'piyon', 12, 12), far = spawnUnit(g, 0, 'piyon', 20, 20), foe = spawnUnit(g, 1, 'piyon', 12.5, 12);
+  near.hp = 40; far.hp = 40; foe.hp = 40;
+  assert.equal(castSkill(g, 0, 'sifa', 12, 12), true, 'şifa kullanılabilir');
+  assert.equal(Math.round(near.hp), 70, 'şifa en yüksek canın %30\'unu basar (40 -> 70)');
+  assert.equal(far.hp, 40, 'alan dışındaki birlik iyileşmez'); assert.equal(foe.hp, 40, 'düşman iyileşmez');
+  assert.equal(castSkill(g, 0, 'sifa', 12, 12), false, 'şifa bekleme süresinde');
+  near.hp = 90; g.teams[0].skills.sifa = 0; castSkill(g, 0, 'sifa', 12, 12);
+  assert.equal(near.hp, 100, 'şifa en yüksek canı aşmaz');
+  // ok yağmuru: yalnızca düşman ve alan içi
+  const friend = spawnUnit(g, 0, 'piyon', 12, 12.5); const farFoe = spawnUnit(g, 1, 'piyon', 22, 22); farFoe.hp = 100; friend.hp = 100; foe.hp = 100;
+  assert.equal(castSkill(g, 0, 'yagmur', 12, 12), true);
+  assert.equal(foe.hp, 55, 'ok yağmuru alandaki düşmana 45 hasar'); assert.equal(friend.hp, 100, 'dostlara zarar vermez'); assert.equal(farFoe.hp, 100, 'alan dışına etkisi yok');
+  // hız: aynı sürede daha uzağa gider ve daha çabuk vurur
+  const h1 = spawnUnit(g, 0, 'piyon', 3, 3), h2 = spawnUnit(g, 0, 'piyon', 3, 9);
+  commandMove(g, [h1.id, h2.id], 15, 3, 'move'); h2.ty = 9; h2.tx = 15;
+  assert.equal(castSkill(g, 0, 'hiz', 3, 3), true);
+  assert.ok(h1.haste > 0 && h2.haste === 0, 'hız yalnızca alandaki birliklere uygulanır');
+  for (let i = 0; i < 20; i++) step(g, 0.05);
+  assert.ok(h1.x - 3 > (h2.x - 3) * 1.4, 'hızlı birlik belirgin şekilde daha uzağa gider');
+  // elenen takım kullanamaz
+  g.teams[2].alive = false; assert.equal(castSkill(g, 2, 'sifa', 5, 5), false, 'elenen takım yetenek kullanamaz');
+  // olaylar
+  assert.ok(g.events.some(e => e.type === 'skill' && e.skill === 'sifa'), 'yetenek olayı üretilir');
+}
+console.log('yetenek testleri tamam');
+
+// Yapay zeka yetenekleri: normal/zor kullanır, kolay kullanmaz
+{
+  const count = diff => { let n = 0; for (let k = 0; k < 6; k++) { const g = createGame({ seed: 1 + k * 7 }), ais = [0, 1, 2, 3].map(t => createAI(t, diff)); for (let i = 0; i < 20 * 300; i++) { ais.forEach(a => stepAI(g, a, 0.05)); step(g, 0.05); n += g.events.filter(e => e.type === 'skill').length; g.events.length = 0; } } return n; };
+  const kolay = count('kolay'), normal = count('normal'), zor = count('zor');
+  assert.equal(kolay, 0, 'kolay yapay zeka yetenek kullanmaz');
+  assert.ok(normal > 0 && zor > 0, `normal (${normal}) ve zor (${zor}) yetenek kullanır`);
+  console.log('yapay zeka yetenek kullanımı (6 oyun, 5 dk): kolay', kolay, 'normal', normal, 'zor', zor);
+}

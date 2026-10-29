@@ -21,6 +21,11 @@ export function playEvent(e, myTeam) {
   if (e.type === 'hit') { if (now - lastHit < 60) return; lastHit = now; tone(180, 0.08, 'square', 0.035, -80); }
   else if (e.type === 'death') tone(220, 0.25, 'sawtooth', 0.04, -170);
   else if (e.type === 'capture') { const mine = e.team === myTeam; tone(mine ? 520 : 260, 0.18, 'triangle', 0.06); setTimeout(() => tone(mine ? 780 : 200, 0.25, 'triangle', 0.06), 120); }
+  else if (e.type === 'skill') {
+    if (e.skill === 'sifa') [523, 659, 784].forEach((f, i) => setTimeout(() => tone(f, 0.18, 'sine', 0.05), i * 90));
+    else if (e.skill === 'yagmur') { tone(120, 0.35, 'sawtooth', 0.05, -60); setTimeout(() => tone(90, 0.3, 'sawtooth', 0.05, -40), 140); }
+    else tone(300, 0.3, 'triangle', 0.05, 500);
+  }
   else if (e.type === 'spawn' && e.team === myTeam) tone(400, 0.06, 'sine', 0.025);
 }
 export const clickSound = () => tone(600, 0.05, 'sine', 0.04);

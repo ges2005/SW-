@@ -1,13 +1,13 @@
-import { commandMove } from './sim.js';
+import { commandMove, castSkill } from './sim.js';
 import { CFG } from './config.js';
 import { createVision, updateVision, isVisible, isSeen } from './vision.js';
 
 // Zorluk seviyeleri. Yapay zeka da sisle sınırlıdır: yalnızca kendi görüşündeki düşmanı bilir.
 // Nokta konumlarını bilir ama sahibini ancak gördüğünde öğrenir (görmediği yeri tarafsız sayar).
 export const DIFFICULTY = {
-  kolay:  { label: 'Kolay',  think: 3.0, wave: 6, baseArmy: 9, defend: false, counter: false, scout: false, expand: 1, sloppy: 0.5, lazy: 0.3 },
-  normal: { label: 'Normal', think: 1.5, wave: 5, baseArmy: 7, defend: true,  counter: true,  scout: true,  expand: 2, sloppy: 0.15, lazy: 0.1 },
-  zor:    { label: 'Zor',    think: 1.0, wave: 4, baseArmy: 7, defend: true,  counter: true,  scout: true,  expand: 2, sloppy: 0, lazy: 0 },
+  kolay:  { label: 'Kolay',  think: 3.0, wave: 6, baseArmy: 9, defend: false, counter: false, scout: false, expand: 1, sloppy: 0.5, lazy: 0.3, skills: {} },
+  normal: { label: 'Normal', think: 1.5, wave: 5, baseArmy: 7, defend: true,  counter: true,  scout: true,  expand: 2, sloppy: 0.15, lazy: 0.1, skills: { sifa: 3, yagmur: 3 } },
+  zor:    { label: 'Zor',    think: 1.0, wave: 4, baseArmy: 7, defend: true,  counter: true,  scout: true,  expand: 2, sloppy: 0, lazy: 0, skills: { sifa: 2, yagmur: 2, hiz: 3 } },
 };
 
 export function createAI(teamId, diff = 'normal', delay = 0) {
@@ -48,6 +48,7 @@ function think(g, ai) {
     else { const bag = ['piyon', 'piyon', 'okcu', 'zirh']; g.teams[T].prod = bag[Math.floor(Math.random() * bag.length)]; }
   }
   if (!mine.length) return;
+  useSkills(g, ai, mine, enemies);
   const free = mine;
 
   // 2) savunma: noktalarımıza yaklaşan düşmanı karşıla (yeterince güçlüysek)
@@ -103,5 +104,28 @@ function think(g, ai) {
       if (d < bs) { bs = d; best = p; }
     }
     if (best) commandMove(g, idle.map(u => u.id), best.x, best.y, 'attack');
+  }
+}
+
+// Özel yetenekler: sayı eşikleri zorluğa göre (D.skills[yetenek] = gereken en az birlik sayısı).
+function useSkills(g, ai, mine, enemies) {
+  const T = ai.teamId, sk = ai.D.skills, tm = g.teams[T];
+  const ready = k => sk[k] && tm.skills[k] <= 0;
+  const pick = (pool, near, r, need) => { // alanda en çok birlik toplayan birliğin konumu
+    let best = null, bc = 0;
+    for (const c of pool) { const n = near.filter(u => dist(u, c) <= r).length; if (n > bc) { bc = n; best = c; } }
+    return bc >= need ? best : null;
+  };
+  if (ready('sifa')) {
+    const hurt = mine.filter(u => u.hp < 0.65 * u.maxHp), c = pick(hurt, hurt, CFG.skills.sifa.radius, sk.sifa);
+    if (c) { castSkill(g, T, 'sifa', c.x, c.y); return; }
+  }
+  if (ready('yagmur')) {
+    const c = pick(enemies, enemies, CFG.skills.yagmur.radius, sk.yagmur);
+    if (c) { castSkill(g, T, 'yagmur', c.x, c.y); return; }
+  }
+  if (ready('hiz')) { // çatışmaya girerken: birlikler toplu ve düşman yakında
+    const c = pick(mine, mine, CFG.skills.hiz.radius, sk.hiz);
+    if (c && enemies.some(e => dist(e, c) < 8)) castSkill(g, T, 'hiz', c.x, c.y);
   }
 }

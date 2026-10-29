@@ -24,6 +24,13 @@
   #prod small{font-size:11px;opacity:.7}
   #sel{position:fixed;left:max(10px,env(safe-area-inset-left));bottom:calc(max(10px,env(safe-area-inset-bottom)) + 76px);display:flex;gap:8px}
   #sel[hidden]{display:none}
+  #skills{position:fixed;right:max(10px,env(safe-area-inset-right));bottom:calc(max(10px,env(safe-area-inset-bottom)) + 84px);display:flex;flex-direction:column;gap:8px;z-index:2}
+  #skills button{position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;width:62px;min-width:62px;min-height:62px;padding:0;border-radius:50%;line-height:1.05;background:#fffe}
+  #skills b{font-size:24px;font-weight:400;position:relative;z-index:1}
+  #skills small{font-size:10px;font-weight:600;position:relative;z-index:1;opacity:.75}
+  #skills i{position:absolute;inset:0;background:conic-gradient(#0009 calc(var(--cd,0) * 360deg),transparent 0);border-radius:50%;pointer-events:none}
+  #skills button.cool b{opacity:.45}
+  #skills button.aim{background:#ffd24a;outline:3px solid #fff;box-shadow:0 0 14px #ffd24a}
   #toast{position:fixed;left:50%;top:38%;transform:translateX(-50%);background:#000b;color:#fff;padding:10px 16px;border-radius:12px;font-size:15px;pointer-events:none;z-index:3;white-space:nowrap}
   #toast[hidden]{display:none}
   #sel button{min-height:48px;min-width:64px;background:#ffd24a;font-size:16px}
@@ -50,6 +57,9 @@
   #msg{z-index:5;position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:#000a;color:#fff;font-size:36px}
   /* yatay (kısa) ekran: düğmeler biraz küçülür */
   @media (max-height:520px){
+    #skills{bottom:calc(max(10px,env(safe-area-inset-bottom)) + 108px);flex-direction:row;right:max(10px,env(safe-area-inset-right))}
+    #skills button{width:52px;min-width:52px;min-height:52px}
+    #skills small{display:none}
     #prod button{min-height:52px;min-width:56px}
     #prod small{display:none}
     #sel{bottom:calc(max(10px,env(safe-area-inset-bottom)) + 64px)}
@@ -62,6 +72,11 @@
 <body>
 <canvas id="c"></canvas>
 <div id="hud"></div><div id="seed" hidden></div>
+<div id="skills">
+  <button data-skill="sifa" title="Şifa: alandaki dostlara %30 can (Q)"><i></i><b>💚</b><small>Şifa</small></button>
+  <button data-skill="yagmur" title="Ok Yağmuru: alandaki düşmanlara hasar (W)"><i></i><b>☄️</b><small>Yağmur</small></button>
+  <button data-skill="hiz" title="Hız: alandaki dostlar hızlanır (E)"><i></i><b>⚡</b><small>Hız</small></button>
+</div>
 <div id="toast" hidden></div>
 <div id="sel" hidden><button id="stop">✋ Dur</button><button id="selclear" title="Seçimi bırak">✕</button></div>
 <div id="prod">

@@ -5,6 +5,8 @@ const N = CFG.mapSize;
 export const TW = 64, TH = 32;
 
 // Harita (i,j) <-> dünya (izometrik) <-> ekran dönüşümleri. Tıklama ve çizim aynı fonksiyonları kullanır.
+// Yer düzleminde r kare yarıçaplı çemberin izometrik elips yarıçapları
+export const ringRx = (r, z) => r * 45.25 * z, ringRy = (r, z) => r * 22.6 * z;
 export const toWorld = (i, j) => ({ x: (i - j) * TW / 2, y: (i + j) * TH / 2 });
 export const fromWorld = (x, y) => { const a = x / (TW / 2), b = y / (TH / 2); return { i: (a + b) / 2, j: (b - a) / 2 }; };
 
@@ -130,6 +132,14 @@ export function render(ctx, cam, g, ui) {
   }
 
   if (ui.fx) ui.fx.draw(ctx, cam);
+
+  // yetenek hedefleme önizlemesi: seçilen alan (elips) ve simge
+  if (ui.aimSkill && ui.aim) {
+    const S = CFG.skills[ui.aimSkill], c = toScreen(cam, ui.aim.x, ui.aim.y);
+    ctx.fillStyle = S.renk + '33'; ctx.strokeStyle = S.renk; ctx.lineWidth = 3; ctx.setLineDash([10, 6]);
+    ctx.beginPath(); ctx.ellipse(c.x, c.y, ringRx(S.radius, z), ringRy(S.radius, z), 0, 0, 7); ctx.fill(); ctx.stroke(); ctx.setLineDash([]);
+    ctx.font = `${26 * z}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#fff'; ctx.fillText(S.ikon, c.x, c.y);
+  }
 
   // sürükleyerek gönderme oku
   if (ui.arrow) {

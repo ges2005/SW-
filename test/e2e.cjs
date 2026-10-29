@@ -39,7 +39,7 @@ const ok = (c, m) => { if (!c) throw new Error('BAŞARISIZ: ' + m); console.log(
   ok(!(await p.isVisible('#menu')) && await p.isVisible('#tut'), 'bölüm başladı, öğretici bandı görünüyor');
   const u0 = await unitXY(0);
   await p.touchscreen.tap(u0.x, u0.y); await wait(1500);
-  ok((await p.textContent('#tut-n')) === '2/7', 'öğretici birime dokununca 2. adıma geçti');
+  ok((await p.textContent('#tut-n')) === '2/8', 'öğretici birime dokununca 2. adıma geçti');
 
   // Kazanma / kaybetme akışı
   await p.evaluate(() => { const { game } = window.__game(); game.teams.forEach(t => { if (t.id !== 0) t.alive = false; }); game.winner = 0; });
@@ -139,6 +139,37 @@ const ok = (c, m) => { if (!c) throw new Error('BAŞARISIZ: ' + m); console.log(
   ok(await p.evaluate(() => window.__game().game.units.some(u => u.team === 0 && u.tx !== null)), 'emir verildi (geri alma senaryosu)');
   await touch('touchStart', [{ x: 150, y: 300 }, { x: 230, y: 300 }]); await wait(80); await touch('touchEnd', []); await wait(600);
   ok(await p.evaluate(() => !window.__game().game.units.some(u => u.team === 0 && u.tx !== null)), 'seçim yokken iki parmakla dokunuş son emri geri alıyor');
+
+  // --- Özel yetenekler ---
+  await freeze(); await wait(100);
+  ok((await p.locator('#skills button:visible').count()) === 3, '3 yetenek düğmesi görünüyor');
+  const tgt = await tileXY(base.i, base.j + 1.5);
+  // soğumadayken dokunmak hedeflemeyi başlatmaz
+  await p.evaluate(() => { const { game } = window.__game(); game.teams[0].skills.sifa = 20; });
+  await p.tap('[data-skill="sifa"]'); await wait(120);
+  ok(await p.evaluate(() => window.__game().ui.aimSkill === null), 'soğumadaki yetenek hedeflemeyi başlatmıyor');
+  // Şifa: hazırken dokun, parmağı bas-sürükle-bırak
+  await p.evaluate(() => { const { game } = window.__game(); game.teams[0].skills.sifa = 0; game.units.filter(u => u.team === 0).forEach(u => { u.hp = u.maxHp * 0.4; }); });
+  await p.tap('[data-skill="sifa"]'); await wait(120);
+  ok(await p.evaluate(() => window.__game().ui.aimSkill === 'sifa'), 'hazır yeteneğe dokununca hedefleme başladı');
+  await touch('touchStart', [{ x: tgt.x + 30, y: tgt.y + 44 }]);
+  for (let k = 1; k <= 4; k++) await touch('touchMove', [{ x: tgt.x + 30 - k * 7.5, y: tgt.y + 44 }]);
+  const aimNow = await p.evaluate(() => { const { ui } = window.__game(); return ui.aim && { x: ui.aim.x, y: ui.aim.y }; });
+  ok(aimNow !== null, 'hedeflerken alan önizlemesi var');
+  await touch('touchEnd', []); await wait(600);
+  const healed = await p.evaluate(() => { const { game, ui } = window.__game(); const us = game.units.filter(u => u.team === 0 && Math.hypot(u.x - ui.lastCast.x, u.y - ui.lastCast.y) <= 3.2); return { n: us.length, min: Math.min(...us.map(u => u.hp / u.maxHp)), cd: game.teams[0].skills.sifa, aim: ui.aimSkill, used: ui.usedSkill }; });
+  ok(healed.n >= 3 && healed.min > 0.65 && healed.cd > 40 && healed.aim === null && healed.used, `Şifa %30 can bastı (en düşük ${(healed.min * 100).toFixed(0)}%), bekleme başladı, hedefleme kapandı`);
+  ok(await p.evaluate(() => document.querySelector('[data-skill="sifa"]').classList.contains('cool')), 'kullanılan yetenek düğmesinde soğuma göstergesi var');
+  // Ok Yağmuru: yalnızca düşmana hasar
+  await p.evaluate(() => { const { game } = window.__game(); game.teams[0].skills.yagmur = 0; const b3 = game.points.find(x => x.base && x.team === 0); const e0 = game.units.find(u => u.team !== 0); e0.x = b3.x; e0.y = b3.y + 1.5; e0.hp = e0.maxHp; window.__foe = e0.id; });
+  await p.tap('[data-skill="yagmur"]'); await wait(120);
+  await touch('touchStart', [{ x: tgt.x, y: tgt.y + 44 }]); await touch('touchMove', [{ x: tgt.x, y: tgt.y + 44 }]); await touch('touchEnd', []); await wait(600);
+  ok(await p.evaluate(() => { const { game } = window.__game(); const e0 = game.units.find(u => u.id === window.__foe); return !e0 || e0.hp <= e0.maxHp - 40; }), 'Ok Yağmuru alandaki düşmana hasar verdi');
+  // iki parmakla dokunma hedeflemeyi iptal eder
+  await p.evaluate(() => { const { game } = window.__game(); game.teams[0].skills.hiz = 0; });
+  await p.tap('[data-skill="hiz"]'); await wait(120);
+  await touch('touchStart', [{ x: 150, y: 300 }, { x: 230, y: 300 }]); await wait(80); await touch('touchEnd', []); await wait(600);
+  ok(await p.evaluate(() => window.__game().ui.aimSkill === null), 'iki parmakla dokunma yetenek hedeflemeyi iptal ediyor');
 
   // yanlış seçilen birim: boşa çift dokun -> emir geri alınır, seçim bırakılır
   await freeze(); await wait(100);
