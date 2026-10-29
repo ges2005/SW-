@@ -13,14 +13,15 @@
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <style>
-  html,body{margin:0;height:100%;overflow:hidden;background:#06264d;font-family:system-ui,sans-serif;overscroll-behavior:none}
-  canvas{display:block;width:100vw;height:100vh;touch-action:none;-webkit-user-select:none;user-select:none}
+  html,body{margin:0;height:100%;overflow:hidden;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;background:#06264d;font-family:system-ui,sans-serif;overscroll-behavior:none}
+  canvas{position:fixed;inset:0;display:block;width:100%;height:100%;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
   #hud{position:fixed;top:max(8px,env(safe-area-inset-top));left:8px;right:8px;color:#fff;font-size:14px;background:#0008;padding:6px 10px;border-radius:8px;pointer-events:none}
   #bar{position:fixed;left:max(8px,env(safe-area-inset-left));bottom:max(8px,env(safe-area-inset-bottom));display:flex;gap:8px}
   button{min-width:56px;min-height:48px;padding:0 14px;font-size:16px;border:0;border-radius:10px;background:#fffd;color:#111}
   button:active{background:#fff}
   #prod{position:fixed;left:max(8px,env(safe-area-inset-left));bottom:calc(max(8px,env(safe-area-inset-bottom)) + 58px);display:flex;gap:8px}
   #prod button{min-width:56px;font-size:22px}
+  #none.has{background:#ffd24a}
   button.on{background:#ffd24a;outline:3px solid #fff}
   #cmd{position:fixed;right:max(8px,env(safe-area-inset-right));bottom:120px;display:flex;flex-direction:column;gap:8px;align-items:stretch}
   #cmd button{min-width:88px;font-size:15px;padding:0 8px}
@@ -44,6 +45,11 @@
   #tut button{min-height:40px;min-width:56px;padding:0 10px;font-size:14px;background:#fff}
   #tut span{font-weight:700;opacity:.7}
   #msg{z-index:5;position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:#000a;color:#fff;font-size:36px}
+  /* kısa dikey ekran (ör. 360x640): komut sütunu sıkışsın, öğretici bandıyla çakışmasın */
+  @media (max-height:700px) and (orientation:portrait){
+    #cmd{gap:6px;bottom:104px}
+    #cmd button{min-height:44px}
+  }
   /* yatay (kısa) ekran: komutlar iki sütun, daha küçük düğmeler */
   @media (max-height:520px){
     #cmd{flex-direction:row;flex-wrap:wrap;width:192px;bottom:112px;gap:6px}
@@ -59,8 +65,8 @@
 <canvas id="c"></canvas>
 <div id="hud"></div><div id="seed" hidden></div>
 <div id="prod"><button data-prod="piyon" title="Piyon">⚔️</button><button data-prod="okcu" title="Okçu">🏹</button><button data-prod="zirh" title="Zırhlı">🛡️</button></div>
-<div id="cmd"><button id="mode"></button><button id="stop">✋ Dur</button><button data-group="0">1</button><button data-group="1">2</button><button data-group="2">3</button></div>
-<div id="bar"><button id="all">Hepsi</button><button id="none">İptal</button><button id="base">Üs</button></div>
+<div id="cmd"><button id="boxmode">▭ Kutu</button><button id="mode"></button><button id="stop">✋ Dur</button><button data-group="0">1</button><button data-group="1">2</button><button data-group="2">3</button></div>
+<div id="bar"><button id="all">Hepsi</button><button id="none">✕ Bırak</button><button id="base">Üs</button></div>
 <button id="mute">🔊</button>
 <div id="tut" hidden><span id="tut-n"></span><p id="tut-text"></p><button id="tut-skip">Atla</button></div>
 <div id="menu">

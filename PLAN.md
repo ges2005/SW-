@@ -75,6 +75,12 @@ Mantık ayrı olduğu için çizim/girdi değişse (başka kamera, yeni ekran) m
   - **Android:** Capacitor 8 projesi (`android/`), özel simge ve açılış ekranı, tam ekran tema, `.github/workflows/android.yml` (debug APK). **Derleme doğrulanamadı:** bu ortamda Google Maven/SDK erişimi yok (`./gradlew tasks` → 403). İlk gerçek doğrulama GitHub Actions çalıştırmasıdır.
   - **iOS:** yapılmadı, gereksinimler `docs/YAYIN-VE-MOBIL.md` içinde.
 
+- **iPhone geri bildirimi (ilk gerçek cihaz testi):**
+  1. *Dokunulan yere gitmiyordu:* iki neden. (a) Tuval CSS'te `100vh`, çizim alanı `innerHeight` idi; iPhone Safari'de adres çubuğu açıkken ikisi farklı olduğu için tuval dikeyde esniyor, hedef ~3 kare kayıyordu (simülasyonla yeniden üretildi: hata 2.9 kare → 0). Çizim boyutu artık tuvalin gerçek boyutundan alınıyor, dokunma koordinatı ölçekle düzeltiliyor, yeniden boyutlanınca yakınlaştırma sıfırlanmıyor. (b) Birime dokunma testi gövdenin 18 px **altını** ölçüyordu (işaret hatası); gövdeye dokununca tanımıyordu. Düzeltildi, dokunma alanı da büyütüldü.
+  2. *Seçimi bırakamıyordu:* "İptal" düğmesi "✕ Bırak" oldu ve seçim varken sarıya dönüyor; seçili birime tekrar dokunmak da seçimi kaldırıyor.
+  3. *Çoklu seçim zordu:* yeni **▭ Kutu** kipi: açıkken tek parmakla sürükleyip çerçeve çizilir, birime dokunmak seçime ekler/çıkarır. İki parmakla hem yakınlaştırma hem kaydırma. Basılı tutma süresi 350→300 ms. Öğretici metni güncellendi.
+  Testler: `test/e2e.cjs` bu üç senaryoyu (ölçü kayması, bırakma, kutu/ekleme) gerçek dokunma olaylarıyla sınıyor.
+
 ## Doğrulanmadı / açık işler
 - Gerçek telefonda dokunma hissi, performans (çok birimli savaşlar), ses.
 - Android APK derlemesi ve cihaza kurulumu; Pages yayını.
