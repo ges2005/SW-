@@ -2,14 +2,13 @@ import { ownedCount } from './sim.js';
 
 // Rehberli öğretici: her adım bir koşul tamamlanınca ilerler. Metinler kısa tutulur (mobil ekran).
 export function createTutorial(game, cam, ui) {
-  const start = { x: cam.x, y: cam.y, zoom: cam.zoom };
   const steps = [
-    { text: 'Bir birime dokun ya da "Hepsi"ye bas; altında beyaz halka çıkar. Seçiliye tekrar dokunursan ya da ✕ Bırak\'a basarsan seçim kalkar. Birden çok birim için ▭ Kutu\'yu aç ve parmağınla çerçeve çiz.', done: () => ui.selected.size > 0 },
-    { text: 'Şimdi haritada bir ♥ ya da ♠ noktasına dokun. Seçili birimler oraya yürür.', done: () => game.units.some(u => u.team === 0 && u.tx !== null) },
+    { text: 'Bir birime dokun: seçilir. Art arda dokunarak ekleyebilir, ya da boş yerde parmağını sürükleyip çerçeveyle birçoğunu seçebilirsin. Üssüne dokunursan hepsi seçilir.', done: () => ui.selected.size > 0 },
+    { text: 'Seçiliyken haritaya dokun: birimler oraya gider. Hızlısı: bir birime dokunup parmağını sürükle ve bırak, ok çizer gibi gönderir.', done: () => game.units.some(u => u.team === 0 && u.tx !== null) },
     { text: 'Birimler bir noktada beklerse orayı ele geçirir. Daha çok nokta = daha hızlı üretim, daha çok kapasite, daha güçlü birim. Bir nokta ele geçir.', done: () => ownedCount(game, 0) >= 2 },
-    { text: 'Üretilecek türü soldaki ⚔️ 🏹 🛡️ düğmeleriyle seç. Piyon okçuyu, okçu zırhlıyı, zırhlı piyonu yener. Birini değiştir.', done: () => game.teams[0].prod !== 'piyon' },
-    { text: 'Haritayı parmakla sürükleyerek kaydır, iki parmakla yakınlaştır. Köşedeki mini haritaya dokunarak da gidebilirsin.', done: () => Math.hypot(cam.x - start.x, cam.y - start.y) > 120 || Math.abs(cam.zoom - start.zoom) > 0.15 },
-    { text: 'Birimleri seç, sağdaki "1" düğmesine dokun: seçim gruba kaydolur. Sonra tek dokunuşla geri çağırırsın. ✋ Dur mevzi tutturur; ⚔️/🏃 kipi koşarken savaşıp savaşmayacaklarını belirler.', done: () => ui.groups.some(g => g.length > 0) },
+    { text: 'Üretilecek türü sol alttaki kartlardan seç: ⚔️ 🏹 🛡️. Piyon okçuyu, okçu zırhlıyı, zırhlı piyonu yener. Birini değiştir.', done: () => game.teams[0].prod !== 'piyon' },
+    { text: 'Haritayı iki parmakla kaydır ve yakınlaştır. Köşedeki mini haritaya dokunarak da gidebilirsin.', done: () => ui.camMoved },
+    { text: 'Seçiliyken boş bir yere basılı tut: birimler savaşmadan koşar (geri çekilme). ✋ Dur yerinde tutar, ✕ seçimi bırakır. Basılı tutmayı dene.', done: () => ui.usedRun },
     { text: 'Koyu alan keşfedilmemiş, soluk alan şu an görünmüyor; düşmanı ancak gördüğünde bilirsin. Rakibin ana noktasını (köşedeki büyük kare) ele geçirirsen kazanırsın. Başarılar!', done: null },
   ];
   let i = 0, doneAt = 0;

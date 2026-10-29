@@ -48,10 +48,11 @@ const inter = (a, b) => a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y 
     await p.setViewportSize({ width: w, height: h }); await p.waitForTimeout(400);
     await p.evaluate(() => document.getElementById('restart').click());
     await p.tap('.level:nth-child(1)'); await p.waitForTimeout(300);
+    await p.evaluate(() => { const { game, ui } = window.__game(); game.units.filter(u => u.team === 0).forEach(u => ui.selected.add(u.id)); }); await p.waitForTimeout(200);
     const boxes = await p.evaluate(() => {
       const r = id => { const el = document.getElementById(id); if (!el || el.hidden) return null; const b = el.getBoundingClientRect(); return { x: b.x, y: b.y, width: b.width, height: b.height }; };
       const { cam } = window.__game(); const mw = Math.min(190, cam.w * 0.32);
-      return { hud: r('hud'), mute: r('mute'), tut: r('tut'), cmd: r('cmd'), prod: r('prod'), bar: r('bar'), mini: { x: cam.w - mw - 10, y: cam.h - mw / 2 - 10, width: mw, height: mw / 2 }, w: cam.w, h: cam.h };
+      return { hud: r('hud'), mute: r('mute'), tut: r('tut'), sel: r('sel'), prod: r('prod'), seed: r('seed'), mini: { x: cam.w - mw - 10, y: cam.h - mw / 2 - 10, width: mw, height: mw / 2 }, w: cam.w, h: cam.h };
     });
     const list = Object.entries(boxes).filter(([k, v]) => v && typeof v === 'object');
     for (const [k, v] of list) ok(v.x >= -1 && v.y >= -1 && v.x + v.width <= boxes.w + 1 && v.y + v.height <= boxes.h + 1, `${name} ${w}x${h}: ${k} ekran içinde`);

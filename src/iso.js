@@ -92,7 +92,15 @@ export function render(ctx, cam, g, ui) {
 
   // hedef işaretleri
   ctx.lineWidth = 2;
-  for (const u of g.units) if (ui.selected.has(u.id) && u.tx !== null) poly(ctx, diamond(cam, u.tx, u.ty, 0.35), null, '#e11');
+  ctx.setLineDash([6, 6]);
+  for (const u of g.units) {
+    if (!ui.selected.has(u.id) || u.tx === null) continue;
+    const a = toScreen(cam, u.x, u.y), b = toScreen(cam, u.tx, u.ty), run = u.mode === 'move';
+    ctx.strokeStyle = run ? 'rgba(120,220,255,.8)' : 'rgba(255,230,120,.8)';
+    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  for (const u of g.units) if (ui.selected.has(u.id) && u.tx !== null) poly(ctx, diamond(cam, u.tx, u.ty, 0.35), null, u.mode === 'move' ? '#6cf' : '#fd5');
 
   // birimler (arkadan öne sıralı)
   const us = g.units.filter(u => u.team === 0 || isVisible(V, u.x, u.y)).sort((a, b) => a.x + a.y - (b.x + b.y));
@@ -118,6 +126,15 @@ export function render(ctx, cam, g, ui) {
   }
 
   if (ui.fx) ui.fx.draw(ctx, cam);
+
+  // sürükleyerek gönderme oku
+  if (ui.arrow) {
+    const a = ui.arrow, ang = Math.atan2(a.y1 - a.y0, a.x1 - a.x0);
+    ctx.strokeStyle = '#ffd24a'; ctx.fillStyle = '#ffd24a'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(a.x0, a.y0); ctx.lineTo(a.x1, a.y1); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(a.x1, a.y1); ctx.lineTo(a.x1 - 16 * Math.cos(ang - 0.45), a.y1 - 16 * Math.sin(ang - 0.45)); ctx.lineTo(a.x1 - 16 * Math.cos(ang + 0.45), a.y1 - 16 * Math.sin(ang + 0.45)); ctx.closePath(); ctx.fill();
+    ctx.lineCap = 'butt';
+  }
 
   // kutu seçimi
   if (ui.box) {
