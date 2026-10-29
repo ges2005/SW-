@@ -1,9 +1,10 @@
 import { toTile, clampCam, minimapRect } from './iso.js';
-import { commandMove } from './sim.js';
+import { commandMove, commandRetreat } from './sim.js';
 
 // Dokunmatik öncelikli kontrol (fare ile de aynı):
 //   birime dokun               -> seçime ekle / çıkar        (çift dokun: ekrandaki aynı türden hepsi)
 //   üssüne dokun               -> (seçim yokken) hepsini seç
+//   seçiliyken ÜSSE dokun      -> geri çekil (savaşı bırakıp koşar, varınca mevzi tutar); ayrıca ↩ Çekil düğmesi
 //   boş yere dokun             -> seçili birimleri gönder (saldır); emirden sonra seçim kendiliğinden bırakılır
 //   yetenek seçiliyken         -> parmağı bas = alanı göster (parmağın biraz üstünde), sürükle = ayarla, bırak = kullan
 //   İKİ PARMAKLA tek dokunuş   -> seçimi bırakır (yetenek hedeflemeyi de iptal eder); seçim yoksa son emri (5 sn içinde) geri alır
@@ -52,16 +53,26 @@ export function bindInput(canvas, cam, getGame, ui) {
   }
 
   // Emir verir ve seçimi bırakır (başka birine dokununca önceki emir bozulmasın). Geri almak için önceki durumu saklar.
+  const snap = ids => getGame().units.filter(u => ids.includes(u.id)).map(u => ({ u, tx: u.tx, ty: u.ty, mode: u.mode, hold: u.hold, retreat: u.retreat }));
   const send = (ids, p, mode) => {
     const g = getGame(), t = tileAt(p);
-    const before = g.units.filter(u => ids.includes(u.id)).map(u => ({ u, tx: u.tx, ty: u.ty, mode: u.mode, hold: u.hold }));
+    const before = snap(ids);
     commandMove(g, ids, t.x, t.y, mode);
     ui.pings.push({ x: t.x, y: t.y, mode });
     ui.selected.clear();
     lastOrder = { t: performance.now(), p, before };
   };
+  // Geri çekil: seçili birimler en yakın kendi noktasına savaşmadan koşar; ↩ Çekil düğmesi de bunu çağırır
+  ui.doRetreat = () => {
+    const ids = [...ui.selected]; if (!ids.length) return false;
+    const before = snap(ids);
+    if (!commandRetreat(getGame(), ids)) return false;
+    ui.selected.clear(); ui.usedRetreat = true; ui.toast = { text: '↩ Geri çekiliyorlar', t: performance.now() };
+    lastOrder = { t: performance.now(), p: { x: -999, y: -999 }, before };
+    return true;
+  };
   const undoOrder = () => { // son emri geri al
-    for (const b of lastOrder.before) { b.u.tx = b.tx; b.u.ty = b.ty; b.u.mode = b.mode; b.u.hold = b.hold; }
+    for (const b of lastOrder.before) { b.u.tx = b.tx; b.u.ty = b.ty; b.u.mode = b.mode; b.u.hold = b.hold; b.u.retreat = b.retreat; }
     lastOrder = null; ui.selected.clear();
     ui.toast = { text: '↩ Emir geri alındı, seçim bırakıldı', t: performance.now() };
   };
@@ -94,6 +105,7 @@ export function bindInput(canvas, cam, getGame, ui) {
     // boşa çift dokunma: az önceki emri geri alır, seçim bırakılmış kalır
     // (emirden sonra seçim bırakıldığı için yakın zamanda boşa ikinci dokunuş yalnızca geri alma anlamına gelir; geniş pencere güvenli)
     if (lastOrder && now - lastOrder.t < 600 && Math.hypot(p.x - lastOrder.p.x, p.y - lastOrder.p.y) < 90) { undoOrder(); return; }
+    if (ui.selected.size && hitBase(p)) { ui.doRetreat(); return; } // seçiliyken üsse dokun = geri çekil
     if (ui.selected.size) { send([...ui.selected], p, 'attack'); return; }
     if (hitBase(p)) getGame().units.forEach(u => { if (u.team === 0) ui.selected.add(u.id); }); // üsse dokun = hepsini seç
   }

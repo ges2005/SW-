@@ -1,5 +1,5 @@
 import { CFG } from './config.js';
-import { createGame, step, commandStop, castSkill, ownedCount, unitCount, capacity, spawnInterval, buff } from './sim.js';
+import { createGame, step, commandStop, castSkill, spawnProgress, ownedCount, unitCount, capacity, spawnInterval, buff } from './sim.js';
 import { createAI, stepAI, DIFFICULTY } from './ai.js';
 import { render, toScreen, toWorld, clampCam } from './iso.js';
 import { bindInput } from './input.js';
@@ -9,6 +9,7 @@ import { LEVELS, ENEMY_SEATS, loadProgress, saveProgress, isUnlocked } from './l
 import { createTutorial } from './tutorial.js';
 import { unlockAudio, playEvent, setMuted, isMuted, clickSound } from './audio.js';
 
+const $ = id => document.getElementById(id);
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
 const hud = document.getElementById('hud');
@@ -41,7 +42,19 @@ if (window.visualViewport) window.visualViewport.addEventListener('resize', fit)
 if (window.ResizeObserver) new ResizeObserver(fit).observe(canvas);
 bindInput(canvas, cam, () => game, ui);
 canvas.addEventListener('pointerdown', unlockAudio);
-document.getElementById('mute').onclick = e => { unlockAudio(); setMuted(!isMuted()); e.target.textContent = isMuted() ? '🔇' : '🔊'; };
+try { setMuted(localStorage.getItem('sw-mute') === '1'); } catch { /* kayıt yoksa ses açık */ }
+const setSound = on => { setMuted(!on); try { localStorage.setItem('sw-mute', on ? '0' : '1'); } catch { /* sessiz */ } $('p-sound').textContent = on ? '🔊 Ses: Açık' : '🔇 Ses: Kapalı'; };
+// Duraklatma menüsü (☰): oyun açıkken simülasyon durur
+let paused = false;
+const pauseEl = document.getElementById('pause');
+const setPause = on => { if (on && (!started || ended)) return; paused = on; pauseEl.hidden = !on; if (on) { ui.aimSkill = null; ui.aim = null; } };
+document.getElementById('menubtn').onclick = () => { unlockAudio(); setPause(!paused); clickSound(); };
+$('p-resume').onclick = () => { setPause(false); clickSound(); };
+$('p-sound').onclick = () => { unlockAudio(); setSound(isMuted()); clickSound(); };
+$('p-restart').onclick = () => { setPause(false); startGame(current); };
+setSound(!isMuted());
+$('p-menu').onclick = () => { setPause(false); started = false; msg.hidden = true; buildLevels(); menu.hidden = false; };
+document.addEventListener('visibilitychange', () => { if (document.hidden) setPause(true); }); // başka uygulamaya geçince otomatik duraklat
 
 // Özel yetenekler: düğmeye dokun -> hedefleme (alanı göster, bırakınca kullan). Soğuma süresi düğme üstünde görünür.
 ui.cast = (id, x, y) => { const ok = castSkill(game, 0, id, x, y); if (ok) { clickSound(); ui.lastCast = { id, x, y }; } return ok; };
@@ -65,6 +78,7 @@ const showSkills = () => skillBtns.forEach(b => {
 const selBar = document.getElementById('sel'), selClear = document.getElementById('selclear');
 document.getElementById('stop').onclick = () => { commandStop(game, [...ui.selected]); clickSound(); };
 selClear.onclick = () => { ui.selected.clear(); clickSound(); };
+$('retreat').onclick = () => { if (ui.doRetreat()) clickSound(); };
 
 // Masaüstü kısayolları (isteğe bağlı): 1-3 grup seç, Ctrl+1-3 kaydet, S dur, Esc seçimi bırak
 const alive = id => game.units.some(u => u.id === id);
@@ -73,16 +87,24 @@ const recallGroup = n => { ui.groups[n] = ui.groups[n].filter(alive); ui.selecte
 window.addEventListener('keydown', e => {
   if (e.key >= '1' && e.key <= '3') { const n = +e.key - 1; if (e.ctrlKey || e.metaKey) { e.preventDefault(); saveGroup(n); } else recallGroup(n); }
   else if (e.key === 's' || e.key === 'S') commandStop(game, [...ui.selected]);
-  else if (e.key === 'Escape') { ui.selected.clear(); ui.aimSkill = null; ui.aim = null; }
+  else if (e.key === 'Escape') { if (ui.selected.size || ui.aimSkill) { ui.selected.clear(); ui.aimSkill = null; ui.aim = null; } else setPause(!paused); }
   else if ('qwe'.includes(e.key.toLowerCase()) && e.key.length === 1) skillBtns['qwe'.indexOf(e.key.toLowerCase())].click();
 });
 const prodBtns = [...document.querySelectorAll('[data-prod]')];
-const showProd = () => prodBtns.forEach(b => b.classList.toggle('on', game.teams[0].prod === b.dataset.prod));
+// Seçili üretim kartında sıradaki birime kalan süre dolan bir çember olarak ve saniyeyle görünür (kapasite dolunca "Dolu")
+const showProd = () => {
+  const pr = spawnProgress(game, 0);
+  prodBtns.forEach(b => {
+    const on = game.teams[0].prod === b.dataset.prod;
+    b.classList.toggle('on', on); b.classList.toggle('full', on && pr.full);
+    b.style.setProperty('--pg', on && !pr.full ? (1 - pr.left / pr.total).toFixed(3) : '0');
+    b.querySelector('small').textContent = !on ? CFG.types[b.dataset.prod].label : pr.full ? 'Dolu' : `${Math.ceil(pr.left)} sn`;
+  });
+};
 prodBtns.forEach(b => b.onclick = () => { game.teams[0].prod = b.dataset.prod; showProd(); clickSound(); });
 
 
 // ---- Menü, bölümler, hızlı oyun ----
-const $ = id => document.getElementById(id);
 const menu = $('menu'), levelsEl = $('levels'), tutEl = $('tut');
 const tabs = { camp: $('tab-camp'), quick: $('tab-quick') };
 const showTab = t => { Object.entries(tabs).forEach(([k, el]) => { el.hidden = k !== t; }); document.querySelectorAll('[data-tab]').forEach(b => b.classList.toggle('on', b.dataset.tab === t)); };
@@ -115,11 +137,11 @@ $('play').onclick = () => {
 function startGame(cfg) {
   current = cfg;
   game = createGame({ seed: cfg.seed, seats: [0, ...cfg.enemies], startUnits: 3 });
-  ui.vision = createVision(); ui.selected.clear(); ui.groups = [[], [], []]; ui.camMoved = false; ui.usedRun = false; ui.usedSkill = false; ui.aimSkill = null; ui.aim = null; ui.pings.length = 0;
+  ui.vision = createVision(); ui.selected.clear(); ui.groups = [[], [], []]; ui.camMoved = false; ui.usedRun = false; ui.usedSkill = false; ui.usedRetreat = false; ui.aimSkill = null; ui.aim = null; ui.pings.length = 0;
   ais = cfg.enemies.map(t => createAI(t, cfg.diff, cfg.aiDelay || 0));
   fit(); defaultZoom(); focusBase();
   tut = cfg.tutorial ? createTutorial(game, cam, ui) : null;
-  started = true; ended = false; menu.hidden = true; msg.hidden = true;
+  started = true; ended = false; paused = false; pauseEl.hidden = true; menu.hidden = true; msg.hidden = true;
 }
 function showEnd(won) {
   msg.hidden = false; ended = true;
@@ -138,8 +160,8 @@ buildLevels(); showQuick(); showTab('camp');
 let last = performance.now(), acc = 0;
 const DT = 1 / 20;
 function frame(now) {
-  acc = started ? acc + Math.min(0.25, (now - last) / 1000) : 0; last = now;
-  while (started && acc >= DT) { ais.forEach(a => stepAI(game, a, DT)); step(game, DT); fx.update(DT); ui.time += DT; acc -= DT; }
+  acc = started && !paused ? acc + Math.min(0.25, (now - last) / 1000) : 0; last = now;
+  while (started && !paused && acc >= DT) { ais.forEach(a => stepAI(game, a, DT)); step(game, DT); fx.update(DT); ui.time += DT; acc -= DT; }
   updateVision(ui.vision, game, 0);
   // sis altındaki olayların efekti ve sesi oyuncuya sızmaz
   for (const e of game.events) if (e.team === 0 || isVisible(ui.vision, e.x, e.y)) { fx.add(e); playEvent(e, 0); }

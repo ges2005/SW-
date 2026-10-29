@@ -32,7 +32,7 @@ function basePoint(g, t) { return g.points.find(p => p.base && p.team === t); }
 
 export function spawnUnit(g, t, type, x, y) {
   const hp = CFG.types[type].hp * buff(g, t);
-  const u = { id: g.nextId++, team: t, type, x, y, hp, maxHp: hp, tx: null, ty: null, mode: 'attack', hold: false, haste: 0, cd: 0, atk: 0, moving: false, fx: 0, fy: 0 };
+  const u = { id: g.nextId++, team: t, type, x, y, hp, maxHp: hp, tx: null, ty: null, mode: 'attack', hold: false, retreat: false, haste: 0, cd: 0, atk: 0, moving: false, fx: 0, fy: 0 };
   g.units.push(u);
   return u;
 }
@@ -51,7 +51,7 @@ export function commandMove(g, ids, x, y, mode = 'attack') {
   const set = new Set(ids);
   const us = g.units.filter(u => set.has(u.id));
   us.forEach((u, i) => { // hedef çevresinde dağıt
-    u.mode = mode; u.hold = false;
+    u.mode = mode; u.hold = false; u.retreat = false;
     const a = i * 2.4, r = Math.sqrt(i) * 0.45;
     u.tx = Math.min(N - .5, Math.max(.5, x + Math.cos(a) * r));
     u.ty = Math.min(N - .5, Math.max(.5, y + Math.sin(a) * r));
@@ -72,10 +72,38 @@ export function castSkill(g, team, id, x, y) {
   return true;
 }
 
+// Geri çekil: her birim savaşı bırakıp en yakın kendi noktasına (yoksa ana üsse) savaşmadan koşar,
+// varınca mevzi tutar (kovalamaz). Yeni bir emir verilene kadar orada bekler.
+export function commandRetreat(g, ids) {
+  const set = new Set(ids), mine = g.units.filter(u => set.has(u.id));
+  if (!mine.length) return false;
+  const team = mine[0].team;
+  const homes = g.points.filter(p => p.owner === team);
+  if (!homes.length) return false;
+  const groups = new Map(); // aynı eve gidenler birlikte dağıtılsın
+  for (const u of mine) {
+    let best = homes[0], bd = Infinity;
+    for (const h of homes) { const d = Math.hypot(h.x - u.x, h.y - u.y); if (d < bd) { bd = d; best = h; } }
+    (groups.get(best.id) || groups.set(best.id, []).get(best.id)).push(u.id);
+  }
+  for (const [pid, uids] of groups) {
+    const h = g.points[pid];
+    commandMove(g, uids, h.x, h.y, 'move');
+    for (const u of g.units) if (uids.includes(u.id)) u.retreat = true;
+  }
+  return true;
+}
+
+// Üretimde sıradaki birime kalan süre: { left (sn), total (sn), full (kapasite dolu) }
+export function spawnProgress(g, t) {
+  const tm = g.teams[t], total = spawnInterval(g, t) * CFG.types[tm.prod].cost;
+  return { left: Math.max(0, total - Math.max(0, tm.spawnT)), total, full: unitCount(g, t) >= capacity(g, t) };
+}
+
 // Dur: hedefi iptal eder ve mevzi tutar (yalnızca menzildeki düşmana vurur, kovalamaz)
 export function commandStop(g, ids) {
   const set = new Set(ids);
-  for (const u of g.units) if (set.has(u.id)) { u.tx = u.ty = null; u.hold = true; }
+  for (const u of g.units) if (set.has(u.id)) { u.tx = u.ty = null; u.hold = true; u.retreat = false; }
 }
 
 export function step(g, dt) {
@@ -120,7 +148,7 @@ export function step(g, dt) {
     else if (u.tx !== null) { gx = u.tx; gy = u.ty; }
     if (gx !== null) {
       const dx = gx - u.x, dy = gy - u.y, d = Math.hypot(dx, dy);
-      if (d < 0.1) { if (!chase) { u.tx = u.ty = null; u.mode = 'attack'; } }
+      if (d < 0.1) { if (!chase) { u.tx = u.ty = null; u.mode = 'attack'; if (u.retreat) { u.hold = true; u.retreat = false; } } }
       else { const s = Math.min(d, U.speed * (hasted ? CFG.skills.hiz.mult : 1) * dt); u.x += dx / d * s; u.y += dy / d * s; u.moving = true; u.fx = dx / d; u.fy = dy / d; }
     }
   }
