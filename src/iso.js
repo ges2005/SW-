@@ -35,6 +35,10 @@ const poly = (ctx, pts, fill, stroke) => {
   if (stroke) { ctx.strokeStyle = stroke; ctx.stroke(); }
 };
 const diamond = (cam, i, j, r) => [[i - r, j - r], [i + r, j - r], [i + r, j + r], [i - r, j + r]].map(([a, b]) => toScreen(cam, a, b));
+const mixHex = (a, b, t) => {
+  const pa = [1, 3, 5].map(i => parseInt(a.slice(i, i + 2), 16)), pb = [1, 3, 5].map(i => parseInt(b.slice(i, i + 2), 16));
+  return '#' + pa.map((v, i) => Math.round(v + (pb[i] - v) * t).toString(16).padStart(2, '0')).join('');
+};
 export const teamColor = t => (t < 0 ? '#d9dcde' : CFG.teams[t].color);
 
 export function render(ctx, cam, g, ui) {
@@ -53,27 +57,27 @@ export function render(ctx, cam, g, ui) {
     ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.moveTo(c.x, c.y); ctx.lineTo(d.x, d.y); ctx.stroke();
   }
 
-  // noktalar
-  const GLYPH = { eko: null, demirci: '♦', kule: '♣', ana: null };
+  // noktalar: tarafsız = silik gri; ele geçirilince takımın rengi. Ele geçirme sürerken renk yavaşça geçiş yapar (bar yok).
+  const NEUTRAL = '#cdd2d6', GLYPH = { eko: null, demirci: '♦', kule: '♣', ana: null };
   for (const p of g.points) {
     if (!isSeen(V, p.x, p.y)) continue;
     const own = ownerOf(p), live = isVisible(V, p.x, p.y);
+    const capturing = live && p.capTeam >= 0 && p.prog > 0;
+    const baseCol = own < 0 ? NEUTRAL : teamColor(own);
+    const tile = capturing ? mixHex(baseCol, teamColor(p.capTeam), p.prog) : baseCol;
     const r = p.base ? 1.1 : 0.8;
-    poly(ctx, diamond(cam, p.x, p.y, r), p.base ? teamColor(own) : '#fff', null);
+    poly(ctx, diamond(cam, p.x, p.y, r), tile, null);
     const s = toScreen(cam, p.x, p.y);
     if (!p.base) {
-      ctx.fillStyle = teamColor(own); ctx.font = `${30 * z}px sans-serif`;
+      const coloured = own >= 0 || (capturing && p.prog > 0.5);
+      ctx.fillStyle = coloured ? 'rgba(255,255,255,.92)' : '#a9b0b5'; ctx.font = `${30 * z}px sans-serif`;
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText(GLYPH[p.kind] || (p.suit === 'S' ? '♠' : '♥'), s.x, s.y);
     }
-    if (p.kind === 'kule') { // kule gövdesi
-      ctx.fillStyle = own < 0 ? '#9aa2a8' : teamColor(own); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5;
+    if (p.kind === 'kule') { // kule gövdesi (sahibinin rengi)
+      ctx.fillStyle = tile === NEUTRAL ? '#9aa2a8' : tile; ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.roundRect(s.x - 8 * z, s.y - 40 * z, 16 * z, 38 * z, 3 * z); ctx.fill(); ctx.stroke();
       ctx.fillRect(s.x - 11 * z, s.y - 46 * z, 22 * z, 7 * z);
-    }
-    if (live && p.capTeam >= 0 && p.prog > 0) { // ele geçirme ilerlemesi
-      ctx.fillStyle = '#0003'; ctx.fillRect(s.x - 20 * z, s.y + 14 * z, 40 * z, 5 * z);
-      ctx.fillStyle = teamColor(p.capTeam); ctx.fillRect(s.x - 20 * z, s.y + 14 * z, 40 * z * p.prog, 5 * z);
     }
   }
 
@@ -94,13 +98,13 @@ export function render(ctx, cam, g, ui) {
   ctx.lineWidth = 2;
   ctx.setLineDash([6, 6]);
   for (const u of g.units) {
-    if (!ui.selected.has(u.id) || u.tx === null) continue;
+    if (u.team !== 0 || u.tx === null) continue;
     const a = toScreen(cam, u.x, u.y), b = toScreen(cam, u.tx, u.ty), run = u.mode === 'move';
     ctx.strokeStyle = run ? 'rgba(120,220,255,.8)' : 'rgba(255,230,120,.8)';
     ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
   }
   ctx.setLineDash([]);
-  for (const u of g.units) if (ui.selected.has(u.id) && u.tx !== null) poly(ctx, diamond(cam, u.tx, u.ty, 0.35), null, u.mode === 'move' ? '#6cf' : '#fd5');
+  for (const u of g.units) if (u.team === 0 && u.tx !== null) poly(ctx, diamond(cam, u.tx, u.ty, 0.35), null, u.mode === 'move' ? '#6cf' : '#fd5');
 
   // birimler (arkadan öne sıralı)
   const us = g.units.filter(u => u.team === 0 || isVisible(V, u.x, u.y)).sort((a, b) => a.x + a.y - (b.x + b.y));
