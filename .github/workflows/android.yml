@@ -23,7 +23,9 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
-      - uses: android-actions/setup-android@v3
+      # Runner'da Android SDK hazır gelir; setup-android eklentisi yeni görüntüde 'tools' paketi hatasıyla düşüyordu.
+      - name: Android SDK lisanslarını kabul et
+        run: yes | "$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | head -1)" --licenses > /dev/null || true
       - run: npm ci
       - name: Web dosyalarını derle ve Android projesine kopyala
         run: |
