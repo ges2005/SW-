@@ -1,0 +1,9 @@
+{
+  "appId": "io.github.ges2005.strateji",
+  "appName": "İzometrik Strateji",
+  "webDir": "dist",
+  "backgroundColor": "#06264d",
+  "android": {
+    "allowMixedContent": false
+  }
+}
