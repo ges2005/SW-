@@ -66,12 +66,18 @@ const ok = (c, m) => { if (!c) throw new Error('BAŞARISIZ: ' + m); console.log(
   await freeze(); await wait(100);
   ok(!(await st()).selBar, 'seçim yokken ✋/✕ çubuğu gizli');
 
-  // seçime ekle / çıkar
+  // birime dokun = seç; seçiliyken BAŞKA birime dokun = seçimi onun yanına gönder (onu seçime katmaz)
   const a = await unitXY(0), b = await unitXY(1), c = await unitXY(2);
-  await p.touchscreen.tap(a.x, a.y); await wait(450); await p.touchscreen.tap(b.x, b.y); await wait(450);
-  ok((await st()).sel === 2 && (await st()).selBar, 'art arda dokunmak seçime ekliyor, çubuk görünüyor');
   await p.touchscreen.tap(a.x, a.y); await wait(450);
-  ok((await st()).sel === 1, 'seçili birime tekrar dokunmak seçimden çıkarıyor');
+  ok((await st()).sel === 1 && (await st()).selBar, 'birime dokununca seçiliyor, çubuk görünüyor');
+  await p.touchscreen.tap(b.x, b.y); await wait(450);
+  const nb = await p.evaluate(() => { const { game, ui } = window.__game(); const us = game.units.filter(u => u.team === 0); const ua = us[0], ub = us[1]; return { sel: ui.selected.size, aMoves: ua.tx !== null, dist: ua.tx === null ? 99 : Math.hypot(ua.tx - ub.x, ua.ty - ub.y), bIdle: ub.tx === null && !ui.selected.has(ub.id) }; });
+  ok(nb.sel === 0 && nb.aMoves && nb.dist < 0.5 && nb.bIdle, 'seçiliyken başka birime dokunmak seçili birimi onun yanına gönderiyor, ikincisini seçime katmıyor');
+  await freeze(); await wait(100);
+  await p.touchscreen.tap(a.x, a.y); await wait(450); await p.touchscreen.tap(a.x, a.y); await wait(450);
+  ok((await st()).sel === 0, 'seçili birime tekrar dokunmak seçimi bırakıyor');
+  await p.touchscreen.tap(a.x, a.y); await wait(100); await p.touchscreen.tap(a.x, a.y); await wait(300);
+  { const t = await st(); ok(t.sel === t.units && t.sel >= 2, `birime çift dokunmak ekrandaki aynı türden hepsini seçiyor (${t.sel}/${t.units})`); }
   await p.tap('#selclear'); await wait(150);
   ok((await st()).sel === 0 && !(await st()).selBar, '✕ düğmesi seçimi bırakıyor ve çubuk kayboluyor');
 
@@ -166,6 +172,32 @@ const ok = (c, m) => { if (!c) throw new Error('BAŞARISIZ: ' + m); console.log(
   await p.tap('[data-skill="yagmur"]'); await wait(120);
   await touch('touchStart', [{ x: tgt.x, y: tgt.y + 44 }]); await touch('touchMove', [{ x: tgt.x, y: tgt.y + 44 }]); await touch('touchEnd', []); await wait(600);
   ok(await p.evaluate(() => { const { game } = window.__game(); const e0 = game.units.find(u => u.id === window.__foe); return !e0 || e0.hp <= e0.maxHp - 40; }), 'Ok Yağmuru alandaki düşmana hasar verdi');
+  // düğmeyi basılı tutup doğrudan haritaya sürükle ve bırak = kullan; düğmenin yanında bırak = iptal
+  await freeze(); await wait(100);
+  await p.evaluate(() => { const { game } = window.__game(); game.teams[0].skills.sifa = 0; game.teams[0].skills.hiz = 0; game.units.filter(u => u.team === 0).forEach(u => { u.hp = u.maxHp * 0.4; }); });
+  const sb = await p.evaluate(() => { const r = document.querySelector('[data-skill="sifa"]').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+  const tg2 = await tileXY(base.i, base.j + 1.5);
+  await touch('touchStart', [{ x: sb.x, y: sb.y }]);
+  for (let k = 1; k <= 8; k++) await touch('touchMove', [{ x: sb.x + (tg2.x - sb.x) * k / 8, y: sb.y + (tg2.y + 44 - sb.y) * k / 8 }]);
+  const during = await p.evaluate(() => { const { ui } = window.__game(); return { aiming: ui.aimSkill, hasAim: !!ui.aim }; });
+  ok(during.aiming === 'sifa' && during.hasAim, 'düğmeyi basılı tutup sürüklerken alan önizlemesi çıkıyor');
+  await touch('touchEnd', []); await wait(600);
+  const dragCast = await p.evaluate(() => { const { game, ui } = window.__game(); const us = game.units.filter(u => u.team === 0 && Math.hypot(u.x - ui.lastCast.x, u.y - ui.lastCast.y) <= 3.2); return { n: us.length, min: Math.min(...us.map(u => u.hp / u.maxHp)), cd: game.teams[0].skills.sifa, aim: ui.aimSkill }; });
+  ok(dragCast.n >= 2 && dragCast.min > 0.5 && dragCast.cd > 40 && dragCast.aim === null, 'düğmeden sürükleyip bırakmak yeteneği kullandı (şifa bastı, bekleme başladı)');
+  // iptal: düğmenin yanında bırak
+  await touch('touchStart', [{ x: sb.x, y: sb.y }]);
+  for (let k = 1; k <= 8; k++) await touch('touchMove', [{ x: sb.x + (tg2.x - sb.x) * k / 8, y: sb.y + (tg2.y + 44 - sb.y) * k / 8 }]);
+  const hb = await p.evaluate(() => { const r = document.querySelector('[data-skill="hiz"]').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+  await touch('touchEnd', []); await wait(400);
+  await p.evaluate(() => { const { game } = window.__game(); game.teams[0].skills.yagmur = 0; });
+  const hs = await p.evaluate(() => { const r = document.querySelector('[data-skill="hiz"]').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+  await touch('touchStart', [{ x: hs.x, y: hs.y }]);
+  for (let k = 1; k <= 6; k++) await touch('touchMove', [{ x: hs.x - k * 25, y: hs.y - k * 30 }]);
+  for (let k = 1; k <= 6; k++) await touch('touchMove', [{ x: hs.x - 150 + k * 25, y: hs.y - 180 + k * 30 }]);
+  await touch('touchEnd', []); await wait(500);
+  const cancelled = await p.evaluate(() => { const { game, ui } = window.__game(); return { cd: game.teams[0].skills.hiz, aim: ui.aimSkill }; });
+  ok(cancelled.cd === 0 && cancelled.aim === null, 'sürükleyip düğmenin yanında bırakmak yeteneği iptal ediyor (kullanılmıyor)');
+
   // iki parmakla dokunma hedeflemeyi iptal eder
   await p.evaluate(() => { const { game } = window.__game(); game.teams[0].skills.hiz = 0; });
   await p.tap('[data-skill="hiz"]'); await wait(120);

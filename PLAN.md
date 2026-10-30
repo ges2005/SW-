@@ -138,6 +138,10 @@ Kullanıcı isteği: 3 arkadaşla (toplam 4 kişi), **farklı ağlardan**, linkl
 
 - **CI'da yakalanan test kırılganlığı:** kedi amblemi sürümünde Pages iş akışının e2e adımı bir testte düştü ("seçiliyken üsse dokunmak geri çekilmeyi başlatıyor") ve yayın (deploy) atlandı. Neden ürün hatası değil, testin zamanlamasıydı: birimler üsse 1,5 kare uzaktaydı, çekilme ~0,6 sn sürüyor ve yavaş CI'da test bakana kadar bitmişti. Düzeltme: birimler 5 kare uzağa konuyor (çekilme ~2,3 sn), varış `waitForFunction` ile bekleniyor. Üç paralel koşuyla yük altında doğrulandı. Not: test kapısı yayını bilerek engelliyor; testi atlamak yerine kök neden düzeltildi.
 
+- **Dokunma düzeltmeleri (iPhone geri bildirimi):**
+  - **Yeteneği sürükleyerek kullan:** düğmeyi basılı tutup doğrudan haritaya sürükle, alan parmağın 44 px üstünde görünür, bırakınca kullanılır. Düğmenin yakınında (50 px) bırakırsan **iptal** olur. Eski yol da duruyor: dokun, sonra haritada basılı tutup ayarla, bırak. Soğumadaki düğmede sürükleme başlamaz (dokununca kalan süre görünür). (`src/main.js`; düğmelerde `touch-action:none`)
+  - **Birime dokunma semantiği değişti:** seçiliyken **başka** bir birime dokunmak onu seçime **katmaz**; seçili birimleri o birimin yanına gönderir (emirden sonra seçim bırakılır). Çoklu seçim için çerçeve çizilir ya da çift dokunulur (ekrandaki aynı tür). Seçiliye tekrar dokunmak seçimi bırakır. Bilinen sınır: hareket eden birimin yanına gönderilince hedef emir anındaki konumudur (takip etmez).
+
 ## Doğrulanmadı / açık işler
 - Gerçek telefonda dokunma hissi, performans (çok birimli savaşlar), ses.
 - Android APK derlemesi ve cihaza kurulumu; Pages yayını.

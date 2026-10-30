@@ -60,12 +60,39 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) setPa
 ui.cast = (id, x, y) => { const ok = castSkill(game, 0, id, x, y); if (ok) { clickSound(); ui.lastCast = { id, x, y }; } return ok; };
 const skillBtns = [...document.querySelectorAll('[data-skill]')];
 const toast = text => { ui.toast = { text, t: performance.now() }; };
-skillBtns.forEach(b => b.onclick = () => {
-  const id = b.dataset.skill, left = game.teams[0].skills[id];
-  if (left > 0) { toast(`${CFG.skills[id].ad}: ${Math.ceil(left)} sn sonra hazır`); return; }
-  ui.aimSkill = ui.aimSkill === id ? null : id; ui.aim = null;
-  if (ui.aimSkill) toast(`${CFG.skills[id].ad}: alana parmağını bas, ayarla, bırak`);
-  clickSound();
+// İki kullanım: (1) dokun, sonra haritada basılı tutup ayarla, bırak; (2) düğmeyi basılı tutup doğrudan haritaya sürükle ve bırak
+// (düğmenin yakınında bırakırsan iptal olur)
+skillBtns.forEach(b => {
+  const id = b.dataset.skill; let drag = null, lastDrag = 0;
+  b.addEventListener('pointerdown', e => {
+    if (game.teams[0].skills[id] > 0) return; // hazır değilse sürükleme yok (tıklama kalan süreyi gösterir)
+    drag = { x: e.clientX, y: e.clientY, active: false };
+    try { b.setPointerCapture(e.pointerId); } catch { /* yakalama yoksa tıklama yolu çalışır */ }
+  });
+  b.addEventListener('pointermove', e => {
+    if (!drag) return;
+    if (!drag.active && Math.hypot(e.clientX - drag.x, e.clientY - drag.y) > 14) { drag.active = true; ui.aimSkill = id; unlockAudio(); }
+    if (drag.active) ui.aim = ui.aimFromEvent(e);
+  });
+  const end = e => {
+    if (!drag) return;
+    const d = drag; drag = null;
+    if (!d.active) return; // basit dokunma: onclick halleder
+    lastDrag = performance.now();
+    const r = b.getBoundingClientRect();
+    const cancel = e.type === 'pointercancel' || Math.hypot(e.clientX - (r.left + r.width / 2), e.clientY - (r.top + r.height / 2)) < 50;
+    if (cancel) toast('Yetenek iptal edildi'); else if (ui.aim && ui.cast(id, ui.aim.x, ui.aim.y)) ui.usedSkill = true;
+    ui.aimSkill = null; ui.aim = null;
+  };
+  b.addEventListener('pointerup', end); b.addEventListener('pointercancel', end);
+  b.onclick = () => {
+    if (performance.now() - lastDrag < 500) return; // sürükleyip bırakmanın ardından gelen tıklamayı yok say
+    const left = game.teams[0].skills[id];
+    if (left > 0) { toast(`${CFG.skills[id].ad}: ${Math.ceil(left)} sn sonra hazır`); return; }
+    ui.aimSkill = ui.aimSkill === id ? null : id; ui.aim = null;
+    if (ui.aimSkill) toast(`${CFG.skills[id].ad}: alana parmağını bas, ayarla, bırak`);
+    clickSound();
+  };
 });
 const showSkills = () => skillBtns.forEach(b => {
   const id = b.dataset.skill, S = CFG.skills[id], left = Math.max(0, game.teams[0].skills[id]);

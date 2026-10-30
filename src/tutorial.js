@@ -3,13 +3,13 @@ import { ownedCount } from './sim.js';
 // Rehberli öğretici: her adım bir koşul tamamlanınca ilerler. Metinler kısa tutulur (mobil ekran).
 export function createTutorial(game, cam, ui) {
   const steps = [
-    { text: 'Bir birime dokun: seçilir. Art arda dokunarak ekleyebilir, ya da boş yerde parmağını sürükleyip çerçeveyle birçoğunu seçebilirsin. Üssüne dokunursan hepsi seçilir.', done: () => ui.selected.size > 0 },
-    { text: 'Seçiliyken haritaya dokun: birimler oraya gider ve seçim kendiliğinden bırakılır. Hızlısı: bir birime dokunup parmağını sürükle ve bırak. Yanlış birimi seçtiysen iki parmakla tek sefer dokun: seçim bırakılır, gönderdiysen emir geri alınır.', done: () => game.units.some(u => u.team === 0 && u.tx !== null) },
+    { text: 'Bir birime dokun: seçilir. Birçoğunu seçmek için boş yerde parmağını sürükleyip çerçeve çiz; çift dokunursan ekrandaki aynı türden hepsi seçilir. Üssüne dokunursan hepsi seçilir.', done: () => ui.selected.size > 0 },
+    { text: 'Seçiliyken haritaya dokun: birimler oraya gider ve seçim kendiliğinden bırakılır. Seçiliyken başka bir birime dokunursan seçili birimler onun yanına gider. Hızlısı: bir birime dokunup parmağını sürükle ve bırak. Yanlış birimi seçtiysen iki parmakla tek sefer dokun: seçim bırakılır, gönderdiysen emir geri alınır.', done: () => game.units.some(u => u.team === 0 && u.tx !== null) },
     { text: 'Birimler bir noktada beklerse orayı ele geçirir. Daha çok nokta = daha hızlı üretim, daha çok kapasite, daha güçlü birim. Bir nokta ele geçir.', done: () => ownedCount(game, 0) >= 2 },
     { text: 'Üretilecek türü sol alttaki kartlardan seç: ⚔️ 🏹 🛡️. Piyon okçuyu, okçu zırhlıyı, zırhlı piyonu yener. Birini değiştir.', done: () => game.teams[0].prod !== 'piyon' },
     { text: 'Haritayı iki parmakla kaydır ve yakınlaştır. Köşedeki mini haritaya dokunarak da gidebilirsin.', done: () => ui.camMoved },
     { text: 'Savaştan kaçmak için birimleri seçip ↩ Çekil düğmesine bas (ya da üssüne dokun): savaşı bırakıp en yakın noktana koşar ve orada bekler. Boş yere basılı tutmak da savaşmadan koşturur. ✋ Dur yerinde tutar. Birini dene.', done: () => ui.usedRun || ui.usedRetreat },
-    { text: 'Sağdaki özel yetenekler: 💚 Şifa (alandaki dostlara %30 can), ☄️ Ok Yağmuru (düşmanlara hasar), ⚡ Hız. Birine dokun, sonra haritada parmağını bas, alanı ayarla ve bırak. Hepsinin bekleme süresi var; ilk 15 sn dolar. Birini kullan.', done: () => ui.usedSkill },
+    { text: 'Sağdaki özel yetenekler: 💚 Şifa (alandaki dostlara %30 can), ☄️ Ok Yağmuru (düşmanlara hasar), ⚡ Hız. Düğmeyi basılı tutup doğrudan haritaya sürükle ve bırak (düğmenin yanında bırakırsan iptal), ya da dokun sonra haritada parmağını bas, ayarla, bırak. Hepsinin bekleme süresi var; ilk 15 sn dolar. Birini kullan.', done: () => ui.usedSkill },
     { text: 'Koyu alan keşfedilmemiş, soluk alan şu an görünmüyor; düşmanı ancak gördüğünde bilirsin. Rakibin ana noktasını (köşedeki büyük kare) ele geçirirsen kazanırsın. Başarılar!', done: null },
   ];
   let i = 0, doneAt = 0;
